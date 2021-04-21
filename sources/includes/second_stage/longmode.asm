@@ -4,6 +4,11 @@
 
 switch_to_long_mode:
 
-                  ; This function need to be written by you.
+    ; This function need to be written by you.
+    
+    ; Set CRs and EFER
+    
+    lgdt [GDT64.Pointer]            ; Loading GDT with GDT.Pointer
+    jmp CODE_SEG:LongModeEntry      ; Jumping to 64 bit mode
 
     ret
