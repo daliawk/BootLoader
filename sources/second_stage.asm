@@ -28,9 +28,13 @@ BITS 16
       call print_memory_regions
       
       
-      call get_key_stroke     ; Wait for key storke to jump to second boot stage
+      call get_key_stroke     
       call build_page_table   
       call disable_pic
+      ;call get_key_stroke  
+      call bios_cls   
+
+      
       call load_idt_descriptor
       call switch_to_long_mode
  

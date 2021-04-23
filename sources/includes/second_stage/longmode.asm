@@ -12,7 +12,9 @@ switch_to_long_mode:
     ; Set the PAE and PGE bits (bit 5 and 7).
     mov eax, 10100000b
     ; Store eax into CR4
-    or cr4, eax
+    mov ebx, cr4
+    or eax, ebx
+    mov cr4, eax
 
     ; Setting cr3
     mov edi,PAGE_TABLE_EFFECTIVE_ADDRESS
