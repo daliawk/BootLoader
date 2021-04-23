@@ -28,11 +28,11 @@ BITS 16
       call print_memory_regions
       
       
-      ;call get_key_stroke     ; Wait for key storke to jump to second boot stage
-      ;call build_page_table   
+      call get_key_stroke     ; Wait for key storke to jump to second boot stage
+      call build_page_table   
       call disable_pic
       call load_idt_descriptor
-      ;call switch_to_long_mode
+      call switch_to_long_mode
  
 
       hang:                   ; An infinite loop just in case interrupts are enabled. More on that later.

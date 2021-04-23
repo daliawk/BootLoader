@@ -1,18 +1,6 @@
 [ORG 0x10000]
 
 
-;[BITS 16]
-
-
-
-;mov si, hello_world_str
-;call bios_print
-
-      
-;      %include "sources/includes/first_stage/bios_print.asm"
-
-
-
 [BITS 64]
 
 
