@@ -10,6 +10,7 @@ mov rsi, hello_world_str
 call video_print
 
 
+
 hang:                   ; An infinite loop just in case interrupts are enabled. More on that later.
     hlt               ; Halt will suspend the execution. This will not return unless the processor got interrupted.
     jmp hang          ; Jump to hang so we can halt again.
@@ -67,6 +68,7 @@ kernel_halt:
       %include "sources/includes/third_stage/video.asm"
       %include "sources/includes/third_stage/pit.asm"
       %include "sources/includes/third_stage/ata.asm"
+      %include "sources/includes/third_stage/bitmap.asm"
 
 ;*******************************************************************************************************************
 
@@ -79,6 +81,7 @@ end_of_string  db 13        ; The end of the string indicator
 start_location   dq  0x0  ; A default start position (Line # 8)
 
 hello_world_str db 'Hello all here',13, 0
+created_bitmap db "Finished bitmap", 13, 0
 
 ata_channel_var dq 0
 ata_master_var dq 0
