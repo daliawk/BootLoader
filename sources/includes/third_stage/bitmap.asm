@@ -88,7 +88,17 @@ create_bitmap:
         cmp rcx, 1
         jne check_4k_bits_loop      ; If the region type is not 1, set the bits in the bit map
 
-        add r8, rax                 ; Updating to the last index
+        mov r9, rax
+        make_zero_loop:
+            mov rsi, r8
+            ;call mark_bit
+            mov byte[Bitmap_address + r8], 0
+            inc r8
+            dec r9
+            cmp r9, 0
+            jne make_zero_loop
+            
+        ;add r8, rax                 ; Updating to the last index
         xor rdx, rdx
         idiv r10                    ; Check how many 2MB in this region
         add word[Count_of_2MB], ax ; Inrementing number of available 2MB pages
@@ -108,6 +118,7 @@ create_bitmap:
             dec rax
             cmp rax, 0
             jne check_4k_bits_loop
+            
             add word[Count_of_4KB], r9w  ; The previous available 4KB pages will be mapped with 4KB since they cannot be formed as consecutive 2MB
             mov r9, 0   ; Zero the remainder since there is an unusable region after it
         
@@ -135,29 +146,127 @@ create_bitmap:
     ret
 
 Mapping_Memory:
-
+    pushaq
 
     call create_bitmap
 
     mov rsi, created_bitmap
     call video_print
 
+    ;Create PML4
+    mov rcx, 4      ; Counter of 4 qwords representing 4 PML4 entries
+    mov rax, 0      ; index
+    Initializing_PML4_loop:
+        mov qword[PML4_address+rax], 0
+        add rax, 8
+        dec rcx
+        cmp rcx, 0
+        jne Initializing_PML4_loop
 
-    ; Set es:di with the address of the page table
-    mov ax,PML4_address
-    mov es,ax
-    mov edi,PAGE_TABLE_BASE_OFFSET
 
-    ; Initializing 4 memory pages
-    mov ecx, 0x1000                 ; set rep counter to 4096
-    xor eax, eax                    ; Zero out eax
-    cld                             ; Clear direction flag
-    rep stosd                       ; Store EAX (4 bytes) at address ES:EDI
-    ; rep will repeat for 4096 and advance EDI by 4 each time
-    ; 4 * 4096 = 4 * 4 KB = 16 KB = 4 memory pages
+    popaq
+ret
 
-    mov edi,PAGE_TABLE_BASE_OFFSET ; Reset di to point to 0x1000
-    ; PML4 is now at [es:di] = [0x0000:0x1000]
+
+Page_Walk:
+    ; Parameters:
+    ; rsi --> virtual address
+    ; rdi --> 1 if 2MB
+    pushaq
+
+    shl rdi, 7              ;Used to modify Page Size bit
+
+    mov r8, rsi
+    shr r8, 39
+
+    imul r8, 8              ; Get effective offset of PML4 entry address
+    mov r9, PML4_address
+    add r9, r8              ; Address of PML4 entry
+
+    mov r8, qword[r9]
+    and r8, 1
+    cmp r8, 1               ; Checking present bit
+    je read_pdp
+
+    mov r11, qword[last_address]
+    mov r10, qword[r11]
+    shl r10, 12
+    or qword[r9], r10
+    or qword[r9], 1
+    call create_table
+
+    read_pdp:
+        mov r8, qword[r9]        ; r8 has the value of the PML4 entry
+        shr r8, 12               ; r8 is PDP base address
+
+        mov r9, rsi             ; r10 is the virtual address
+        shr r9, 30              
+        and r9, 111111111b      ; r10 is the 9 bits corresponding to the PDP index
+        imul r9, 8              ; r10 is effective offset of PDP entry address
+        add r9, r8              ; r8 is the address of the PDP entry
+    
+    mov r8, qword[r9]
+    and r8, 1
+    cmp r8, 1               ; Checking present bit
+    je read_PD
+
+    mov r11, qword[last_address]
+    mov r10, qword[r11]
+    shl r10, 12
+    or qword[r9], r10
+    or qword[r9], 1
+    call create_table
+    
+    read_PD:
+        mov r8, qword[r9]        ; r8 has the value of the PDP entry
+        shr r8, 12               ; r8 is PD base address
+
+        mov r9, rsi             ; r10 is the virtual address
+        shr r9, 21              
+        and r9, 111111111b      ; r10 is the 9 bits corresponding to the PD index
+        imul r9, 8              ; r10 is effective offset of PD entry address
+        add r9, r8              ; r8 is the address of the PD entry
+
+    mov r8, qword[r9]
+    and r8, 1
+    cmp r8, 1               ; Checking present bit
+    je read_PT_or_page
+
+    mov r11, qword[last_address]
+    mov r10, qword[r11]
+    shl r10, 12
+    or qword[r9], r10
+    or qword[r9], 1
+    call create_table
+    
+
+
+    popaq
+ret
+
+create_table:
+    pushaq
+
+    ;Create table
+    mov rcx, 512      ; Counter of 512 qwords representing 512 entries
+    mov rax, 0      ; index
+    mov rbx, qword[last_address]
+    Initializing_table_loop:
+        mov qword[rbx+rax], 0
+        add rax, 8
+        dec rcx
+        cmp rcx, 0
+        jne Initializing_table_loop
+
+    add rbx, 4096
+    mov qword[last_address], rbx
+    popaq
+
+ret
+
+    
+
+
 
 
 
