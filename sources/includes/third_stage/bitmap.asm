@@ -4,6 +4,7 @@
 
 
 Bitmap_address dw 0
+Bitmap_end_address dw 0
 Count_of_2MB dw 0
 Count_of_4KB dw 0
 last_address dq 0
@@ -130,6 +131,7 @@ create_bitmap:
 
     add word[Count_of_4KB], r9w  ; The previous available 4KB pages will be mapped with 4KB since they cannot be formed as consecutive 2MB
     add r8, Bitmap_address
+    mov word[Bitmap_end_address], r8
     
     ;Ensuring that the new address is word aligned
     mov rax, r8
@@ -163,7 +165,8 @@ Mapping_Memory:
         cmp rcx, 0
         jne Initializing_PML4_loop
 
-
+    mov edi, cr3
+    mov cr3, edi
     popaq
 ret
 
@@ -188,8 +191,8 @@ Page_Walk:
     cmp r8, 1               ; Checking present bit
     je read_pdp
 
-    mov r11, qword[last_address]
-    mov r10, qword[r11]
+    mov r10, qword[last_address]
+    ;mov r10, qword[r11]
     shl r10, 12
     or qword[r9], r10
     or qword[r9], 1
@@ -199,19 +202,19 @@ Page_Walk:
         mov r8, qword[r9]        ; r8 has the value of the PML4 entry
         shr r8, 12               ; r8 is PDP base address
 
-        mov r9, rsi             ; r10 is the virtual address
+        mov r9, rsi             ; r9 is the virtual address
         shr r9, 30              
-        and r9, 111111111b      ; r10 is the 9 bits corresponding to the PDP index
-        imul r9, 8              ; r10 is effective offset of PDP entry address
-        add r9, r8              ; r8 is the address of the PDP entry
+        and r9, 111111111b      ; r9 is the 9 bits corresponding to the PDP index
+        imul r9, 8              ; r9 is effective offset of PDP entry address
+        add r9, r8              ; r9 is the address of the PDP entry
     
     mov r8, qword[r9]
     and r8, 1
     cmp r8, 1               ; Checking present bit
     je read_PD
 
-    mov r11, qword[last_address]
-    mov r10, qword[r11]
+    mov r10, qword[last_address]
+    ;mov r10, qword[r11]
     shl r10, 12
     or qword[r9], r10
     or qword[r9], 1
@@ -221,26 +224,56 @@ Page_Walk:
         mov r8, qword[r9]        ; r8 has the value of the PDP entry
         shr r8, 12               ; r8 is PD base address
 
-        mov r9, rsi             ; r10 is the virtual address
+        mov r9, rsi             ; r9 is the virtual address
         shr r9, 21              
-        and r9, 111111111b      ; r10 is the 9 bits corresponding to the PD index
-        imul r9, 8              ; r10 is effective offset of PD entry address
-        add r9, r8              ; r8 is the address of the PD entry
+        and r9, 111111111b      ; r9 is the 9 bits corresponding to the PD index
+        imul r9, 8              ; r9 is effective offset of PD entry address
+        add r9, r8              ; r9 is the address of the PD entry
 
     mov r8, qword[r9]
     and r8, 1
     cmp r8, 1               ; Checking present bit
-    je read_PT_or_page
+    je read_PT
 
-    mov r11, qword[last_address]
-    mov r10, qword[r11]
+    mov r10, qword[last_address]
+    ;mov r10, qword[r11]
     shl r10, 12
     or qword[r9], r10
     or qword[r9], 1
+    or qword[r9], rdi
+    cmp rdi, 0
+    jne map_2MB
     call create_table
+
+    read_PT:
+        mov r8, qword[r9]        ; r8 has the value of the PD entry
+        and r8, rdi              ; Check the size
+        cmp r8, 0
+        jne map_2MB
+
+        mov r8, qword[r9]        ; r8 has the value of the PD entry
+        shr r8, 12               ; r8 is PT base address
+
+        mov r9, rsi             ; r9 is the virtual address
+        shr r9, 12              
+        and r9, 111111111b      ; r9 is the 9 bits corresponding to the PT index
+        imul r9, 8              ; r9 is effective offset of PT entry address
+        add r9, r8              ; r9 is the address of the PT entry
+
+    map_4K:
+        mov r8, qword[r9]
+        call get_4K_frame_address   ; returns with physical frame address in rsi
+
+        shl rsi, 12
+        or qword[r9], r10
+        or qword[r9], 1
+    jmp .return
+
+    map_2MB:
     
 
 
+    .return:
     popaq
 ret
 
@@ -258,13 +291,41 @@ create_table:
         cmp rcx, 0
         jne Initializing_table_loop
 
-    add rbx, 4096
+    add rbx, rax
     mov qword[last_address], rbx
+
+    ; Refresh CR3
+
     popaq
 
 ret
 
+get_4K_frame_address:
+    ; returns: rsi has address of physical frame
+    push r8
+    push r9
+
+    mov r8, 0       ;index
     
+    .bitmap_loop:
+        cmp byte[Bitmap_address + r8], 1
+        jne .get_address
+        add r8, 8
+        mov r9, Bitmap_address
+        add r9, r8
+        cmp r9, Bitmap_end_address
+        jne .bitmap_loop
+
+    .get_address:
+        mov r9, qword[PTR_MEM_REGIONS_TABLE]    ; Address of first physical frame
+        add r9, r8                              ; r9: Address of free physical frame
+        mov rsi, r9
+        mov byte[Bitmap_address + r8], 1
+
+    pop r9
+    pop r8
+
+ret
 
 
 
