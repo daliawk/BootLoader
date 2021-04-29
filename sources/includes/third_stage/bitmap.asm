@@ -165,8 +165,40 @@ Mapping_Memory:
         cmp rcx, 0
         jne Initializing_PML4_loop
 
-    mov edi, cr3
+    mov edi, PML4_address
     mov cr3, edi
+
+    ; Mapping all physical memory
+    mov rsi, 0          ; Virtual address
+    mov r8, 1
+    shl r8, 21          ; The value used to increment the virtual address to the next 2MB
+    mov rdi, 1
+    mov r9, 0           ; Count of 2MB mapped
+    .2MB_loop:
+        cmp r9, word[Count_of_2MB]
+        je check_4k_pages
+        call Page_Walk
+        inc r9
+        add rsi, r8      ;Next Virtual Address
+
+        jmp .2MB_loop
+
+
+    check_4k_pages:
+        mov rdi, 0
+        shr r8, 9
+        mov r9, 0           ; Count of 4K mapped
+        .4K_loop:
+            cmp r9, word[Count_of_4KB]
+            je done_mapping
+            call Page_Walk
+            inc r9
+            add rsi, r8      ;Next Virtual Address
+
+            jmp .4K_loop
+
+    done_mapping:
+
     popaq
 ret
 
@@ -265,16 +297,20 @@ Page_Walk:
         call get_4K_frame_address   ; returns with physical frame address in rsi
 
         shl rsi, 12
-        or qword[r9], r10
+        or qword[r9], rsi
         or qword[r9], 1
     jmp .return
 
     map_2MB:
-    
+        mov r8, qword[r9]
+        call get_2MB_frame_address   ; returns with physical frame address in rsi
 
+        shl rsi, 21
+        or qword[r9], rsi
+        or qword[r9], 1
 
     .return:
-    popaq
+        popaq
 ret
 
 create_table:
@@ -295,6 +331,8 @@ create_table:
     mov qword[last_address], rbx
 
     ; Refresh CR3
+    mov edi, PML4_address
+    mov cr3, edi
 
     popaq
 
@@ -317,15 +355,75 @@ get_4K_frame_address:
         jne .bitmap_loop
 
     .get_address:
-        mov r9, qword[PTR_MEM_REGIONS_TABLE]    ; Address of first physical frame
-        add r9, r8                              ; r9: Address of free physical frame
-        mov rsi, r9
+        mov rsi, qword[PTR_MEM_REGIONS_TABLE]    ; Address of first physical frame
+        add rsi, r8                              ; rsi: Address of free physical frame
         mov byte[Bitmap_address + r8], 1
 
     pop r9
     pop r8
 
 ret
+
+get_2MB_frame_address:
+
+    push r8
+    push r9
+    push r10
+    push r11
+
+    mov r8, 0       ;index
+
+    .bitmap_loop:
+        cmp byte[Bitmap_address + r8], 1
+        jne .check_2MB
+        add r8, 8
+        mov r9, Bitmap_address
+        add r9, r8
+        cmp r9, Bitmap_end_address
+        jne .bitmap_loop
+
+
+    .check_2MB:
+        mov r9, r8
+        mov r10, 0      ;Frames count
+        .check_2MB_loop:
+            inc r10
+            add r8, 8
+
+            cmp r10, 512
+            je found
+            
+            mov r9, Bitmap_address
+            add r11, r8
+            cmp r11, Bitmap_end_address
+            je not_found
+            
+            cmp byte[Bitmap_address + r8], 1
+            jne .check_2MB_loop:
+            jmp .bitmap_loop
+
+    found:
+        mov rsi, qword[PTR_MEM_REGIONS_TABLE]    ; Address of first physical frame
+        add rsi, r9                              ; Address of the 2MB physical frame
+
+        mov r10, 0      ;Frames count
+        .loop_set_unavailable:
+            mov byte[Bitmap_address + r9], 1
+            
+            inc r10
+            add r9, 8
+
+            cmp r10, 512
+            jne .loop_set_unavailable
+
+        pop r11
+        pop r10
+        pop r9
+        pop r8
+    ret
+
+    not_found:
+        ; Print error message
 
 
 
