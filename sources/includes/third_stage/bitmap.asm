@@ -3,10 +3,10 @@
 %define MEM_PAGE_4K                 0x1000
 
 
-Bitmap_address dw 0
-Bitmap_end_address dw 0
-Count_of_2MB dw 0
-Count_of_4KB dw 0
+Bitmap_address dq 0
+Bitmap_end_address dq 0
+Count_of_2MB dq 0
+Count_of_4KB dq 0
 last_address dq 0
 PML4_address dq 0
 
@@ -71,7 +71,7 @@ create_bitmap:
     mov r9, PTR_MEM_REGIONS_TABLE               ; r9 = address of memory regions info
     add r9, rax                                 ; r9 = address of memory regions info + (24 bytes * count of regions)
     add r9, 4                                   
-    mov word[Bitmap_address], r9w                ; address of bit map 1 word after memory regions info
+    mov qword[Bitmap_address], r9                ; address of bit map 1 word after memory regions info
 
     
     mov r8, 0       ;index
@@ -102,12 +102,12 @@ create_bitmap:
         ;add r8, rax                 ; Updating to the last index
         xor rdx, rdx
         idiv r10                    ; Check how many 2MB in this region
-        add word[Count_of_2MB], ax ; Inrementing number of available 2MB pages
+        add qword[Count_of_2MB], rax ; Inrementing number of available 2MB pages
         add r9, rdx                 ; Updating cumalitive remaining 4KB pages since last unusable memory
         mov rax, r9
         xor rdx, rdx
         idiv r10                    ; Check how many 2MB in the remaining 4KB pages
-        add word[Count_of_2MB], ax  ; Inrementing number of available 2MB pages with the quotient
+        add qword[Count_of_2MB], rax  ; Inrementing number of available 2MB pages with the quotient
         mov r9, rdx                 ; Seting the remaining pages with the remainder
         jmp increment
 
@@ -120,7 +120,7 @@ create_bitmap:
             cmp rax, 0
             jne check_4k_bits_loop
             
-            add word[Count_of_4KB], r9w  ; The previous available 4KB pages will be mapped with 4KB since they cannot be formed as consecutive 2MB
+            add qword[Count_of_4KB], r9  ; The previous available 4KB pages will be mapped with 4KB since they cannot be formed as consecutive 2MB
             mov r9, 0   ; Zero the remainder since there is an unusable region after it
         
         increment:
@@ -129,9 +129,9 @@ create_bitmap:
             cmp rbx, 0
             jne mem_regions_loop
 
-    add word[Count_of_4KB], r9w  ; The previous available 4KB pages will be mapped with 4KB since they cannot be formed as consecutive 2MB
+    add qword[Count_of_4KB], r9  ; The previous available 4KB pages will be mapped with 4KB since they cannot be formed as consecutive 2MB
     add r8, Bitmap_address
-    mov word[Bitmap_end_address], r8
+    mov qword[Bitmap_end_address], r8
     
     ;Ensuring that the new address is word aligned
     mov rax, r8
@@ -165,8 +165,8 @@ Mapping_Memory:
         cmp rcx, 0
         jne Initializing_PML4_loop
 
-    mov edi, PML4_address
-    mov cr3, edi
+    mov rdi, PML4_address
+    mov cr3, rdi
 
     ; Mapping all physical memory
     mov rsi, 0          ; Virtual address
@@ -174,28 +174,29 @@ Mapping_Memory:
     shl r8, 21          ; The value used to increment the virtual address to the next 2MB
     mov rdi, 1
     mov r9, 0           ; Count of 2MB mapped
-    .2MB_loop:
-        cmp r9, word[Count_of_2MB]
+    
+    loop_2MB:
+        cmp r9, qword[Count_of_2MB]
         je check_4k_pages
         call Page_Walk
         inc r9
         add rsi, r8      ;Next Virtual Address
 
-        jmp .2MB_loop
+        jmp loop_2MB
 
 
     check_4k_pages:
         mov rdi, 0
         shr r8, 9
         mov r9, 0           ; Count of 4K mapped
-        .4K_loop:
-            cmp r9, word[Count_of_4KB]
+        loop_4K:
+            cmp r9, qword[Count_of_4KB]
             je done_mapping
             call Page_Walk
             inc r9
             add rsi, r8      ;Next Virtual Address
 
-            jmp .4K_loop
+            jmp loop_4K
 
     done_mapping:
 
@@ -299,7 +300,7 @@ Page_Walk:
         shl rsi, 12
         or qword[r9], rsi
         or qword[r9], 1
-    jmp .return
+    jmp return
 
     map_2MB:
         mov r8, qword[r9]
@@ -309,7 +310,7 @@ Page_Walk:
         or qword[r9], rsi
         or qword[r9], 1
 
-    .return:
+    return:
         popaq
 ret
 
@@ -331,8 +332,8 @@ create_table:
     mov qword[last_address], rbx
 
     ; Refresh CR3
-    mov edi, PML4_address
-    mov cr3, edi
+    mov rdi, PML4_address
+    mov cr3, rdi
 
     popaq
 
@@ -373,20 +374,20 @@ get_2MB_frame_address:
 
     mov r8, 0       ;index
 
-    .bitmap_loop:
+    bitmap_loop:
         cmp byte[Bitmap_address + r8], 1
-        jne .check_2MB
+        jne check_2MB
         add r8, 8
         mov r9, Bitmap_address
         add r9, r8
         cmp r9, Bitmap_end_address
-        jne .bitmap_loop
+        jne bitmap_loop
 
 
-    .check_2MB:
+    check_2MB:
         mov r9, r8
         mov r10, 0      ;Frames count
-        .check_2MB_loop:
+        check_2MB_loop:
             inc r10
             add r8, 8
 
@@ -399,22 +400,23 @@ get_2MB_frame_address:
             je not_found
             
             cmp byte[Bitmap_address + r8], 1
-            jne .check_2MB_loop:
-            jmp .bitmap_loop
+            jne check_2MB_loop
+            
+            jmp bitmap_loop
 
     found:
         mov rsi, qword[PTR_MEM_REGIONS_TABLE]    ; Address of first physical frame
         add rsi, r9                              ; Address of the 2MB physical frame
 
         mov r10, 0      ;Frames count
-        .loop_set_unavailable:
+        loop_set_unavailable:
             mov byte[Bitmap_address + r9], 1
             
             inc r10
             add r9, 8
 
             cmp r10, 512
-            jne .loop_set_unavailable
+            jne loop_set_unavailable
 
         pop r11
         pop r10
