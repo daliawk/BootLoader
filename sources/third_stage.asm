@@ -11,7 +11,7 @@ call video_print
 
 ;call create_bitmap
 
-;call Mapping_Memory
+call Mapping_Memory
 
 
 hang:                   ; An infinite loop just in case interrupts are enabled. More on that later.
@@ -86,6 +86,12 @@ start_location   dq  0x0  ; A default start position (Line # 8)
 hello_world_str db 'Hello all here',13, 0
 created_bitmap db "Finished bitmap", 13, 0
 not_found_2MB db "Did not find 2MB page", 13, 0
+finished_mapping_msg db "Finished Mapping", 13, 0
+created_page_msg db "Created a page", 13, 0
+read_pdp_msg db "Read PDP", 13, 0
+read_PD_msg db "Read PD", 13, 0
+read_PT_msg db "Read PT", 13, 0
+
 
 ata_channel_var dq 0
 ata_master_var dq 0
@@ -98,4 +104,4 @@ hexa_digits       db "0123456789ABCDEF"         ; An array for displaying hexa d
 ALIGN 4
 
 
-times 8192-($-$$) db 0
+times 8192-($-$$) db 0                          ; 0x2000 long
