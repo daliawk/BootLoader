@@ -114,6 +114,9 @@ create_bitmap:
             dec r9
             cmp r9, 0
             jne make_zero_loop
+
+        cmp r11, 0x200000           ; Check if it is less than 2MB
+        jl increment                ; If it is less than 2MB, there is no need to count the number of 2MB pages
             
         ;add r8, rax                 ; Updating to the last index
         xor rdx, rdx
