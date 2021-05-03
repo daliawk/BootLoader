@@ -13,6 +13,7 @@ Count_of_Frames dq 0
 Count_of_2MB dq 0
 Count_of_4KB dq 0
 last_address dq 0
+last_virtual_address dq 0
 ;PML4_address dq 0
 
 mark_bit:
@@ -255,6 +256,8 @@ Mapping_Memory:
             jmp loop_4K
 
     done_mapping:
+    mov qword[last_virtual_address], rsi
+
     push rsi
     mov rsi, finished_mapping_msg
     call video_print

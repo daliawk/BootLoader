@@ -9,9 +9,12 @@ Kernel:
 mov rsi, hello_world_str
 call video_print
 
-;call create_bitmap
-
 call Mapping_Memory
+
+call memory_tester
+
+mov rsi, horray
+call video_print
 
 
 hang:                   ; An infinite loop just in case interrupts are enabled. More on that later.
@@ -72,6 +75,7 @@ kernel_halt:
       %include "sources/includes/third_stage/pit.asm"
       %include "sources/includes/third_stage/ata.asm"
       %include "sources/includes/third_stage/bitmap.asm"
+      %include "sources/includes/third_stage/memory_tester.asm"
 
 ;*******************************************************************************************************************
 
@@ -91,6 +95,8 @@ created_page_msg db "Created a page", 13, 0
 read_pdp_msg db "Read PDP", 13, 0
 read_PD_msg db "Read PD", 13, 0
 read_PT_msg db "Read PT", 13, 0
+error_msg db "Everything is not fine", 13, 0
+horray db "HORRRAAAAAAAAY!!!!!", 13, 0
 
 
 ata_channel_var dq 0
