@@ -91,32 +91,32 @@ create_bitmap:
         mov ecx, dword[rbx+16]      ; rcx: region type
         mov rax, qword[rbx+8]       ; rax: region length
         xor rdx, rdx
-        mov r9, MEM_PAGE_4K
-        idiv r9                     ; Divide length by 4K
+        mov r13, MEM_PAGE_4K
+        idiv r13                     ; Divide length by 4K
                                     ; rax has count of 4K in this region
-        cmp rcx, 1
         mov rdi, 1
+        cmp rcx, 1
         jne set_bits_loop      ; If the region type is not 1, set the bits in the bit map
 
-        mov r9, rax
+        mov r13, rax
         mov rdi, 0
 
-        mov r11, qword[rbx]         ; Moving to r11 the physical address of the region
-        cmp r11, 0x200000           ; Check if it is less than 2MB
-        jge make_zero_loop          ; If it is greater than 2MB, set to zero
-        mov rdi, 1                  ; Else, if it is less than 2MB, set to 1 since we already mapped the first 2MB
+        ;mov r11, qword[rbx]         ; Moving to r11 the physical address of the region
+        ;cmp r11, 0x200000           ; Check if it is less than 2MB
+        ;jge make_zero_loop          ; If it is greater than 2MB, set to zero
+        ;mov rdi, 1                  ; Else, if it is less than 2MB, set to 1 since we already mapped the first 2MB
 
         make_zero_loop:
             mov rsi, r8
             call mark_bit
             ;mov byte[Bitmap_address + r8], 0
             inc r8
-            dec r9
-            cmp r9, 0
+            dec r13
+            cmp r13, 0
             jne make_zero_loop
 
-        cmp r11, 0x200000           ; Check if it is less than 2MB
-        jl increment                ; If it is less than 2MB, there is no need to count the number of 2MB pages
+        ;cmp r11, 0x200000           ; Check if it is less than 2MB
+        ;jl increment                ; If it is less than 2MB, there is no need to count the number of 2MB pages
             
         ;add r8, rax                 ; Updating to the last index
         xor rdx, rdx
@@ -204,6 +204,15 @@ Mapping_Memory:
     mov qword[0x03000], PAGE_PRESENT_WRITE      ; Now the first PD entry maps the first 2MB
     or qword[0x03000], PAGE_SIZE_BIT            ; Setting the page size to 2MB
 
+    mov rcx, 64
+    mov rax, BITMAP_ADDRESS
+    mov rbx, 0                  ;counter
+    setting_first_2MB:
+        mov byte[rax + rbx], 0xFF
+        inc rbx
+        cmp rbx, rcx
+        jne setting_first_2MB 
+
 
 
     ; Mapping all physical memory
@@ -225,12 +234,14 @@ Mapping_Memory:
         
         jmp loop_2MB
 
+    
+    
+    check_4k_pages:
     push rsi
     mov rsi, finished_mapping_msg
     call video_print
     pop rsi
-    
-    check_4k_pages:
+
         mov rdi, 0
         shr r8, 9
         mov r9, 0           ; Count of 4K mapped
@@ -410,8 +421,9 @@ create_table:
 
     mov rcx, 0x200                  ; set rep counter to 512
     xor rax, rax                    ; Zero out rax
+    mov es, ax
     cld                             ; Clear direction flag
-    rep stosd                       ; Store rax (8 bytes) at address rdi
+    rep stosq                       ; Store rax (8 bytes) at address rdi
 
     mov qword[last_address], rdi    ; Update last address
 
@@ -419,8 +431,8 @@ create_table:
     mov rdi, PML4_ADDRESS
     mov cr3, rdi
 
-    ;mov rsi, created_page_msg
-    ;call video_print
+    mov rsi, created_page_msg
+    call video_print
 
     popaq
 
