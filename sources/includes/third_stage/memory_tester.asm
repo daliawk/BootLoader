@@ -1,10 +1,12 @@
 
-dot db "."
+dot db ".", 0
 
 memory_tester:
     pushaq
 
     mov rsi, 0x200000
+    mov rdi, 1
+    shl rdi, 7
 
     memory_access_loop:
         mov r8, rsi
@@ -16,6 +18,11 @@ memory_tester:
         mov r9, PML4_ADDRESS
         add r9, r8              ; Address of PML4 entry
         mov r8, qword[r9]
+
+        ;push rsi
+        ;mov rsi, check_msg
+        ;call video_print
+        ;pop rsi
 
         ; Get PDP
         shr r8, 12               
@@ -38,6 +45,13 @@ memory_tester:
         imul r9, 8              ; r9 is effective offset of PD entry address
         add r9, r8              ; r9 is the address of the PD entry
 
+        ; Printing
+        ;push rsi
+        ;mov rsi, check_msg
+        ;call video_print
+        ;pop rsi
+
+
         ; Reading PD entry
         mov r8, qword[r9]       ; r8 has the value of the PD entry
 
@@ -55,6 +69,12 @@ memory_tester:
         imul r9, 8              ; r9 is effective offset of PT entry address
         add r9, r8              ; r9 is the address of the PT entry
 
+        ; Printing
+        ;push rsi
+        ;mov rsi, check_msg
+        ;call video_print
+        ;pop rsi
+
         ; Reading from 4K page
         mov r8, qword[r9]       ; r8 has the value of the PT entry
         shr r8, 12               
@@ -64,6 +84,12 @@ memory_tester:
         and r9, 111111111111b   ; r9 is the 12 bits corresponding to the offset
 
         or r8, r9               ; r8 has physical address
+
+        push rsi
+        mov rsi, dot
+        call video_print
+        pop rsi
+
         jmp access
 
         ; Should address be 2MB aligned?
@@ -79,14 +105,14 @@ memory_tester:
         
         
         access:
-            mov r10, byte[dot]
-            mov byte[r8], r10
-            cmp byte[r8], r10
+            mov al, byte[dot]
+            mov byte[r8], al
+            cmp byte[r8], al
             jne memory_error
 
         inc rsi
         cmp rsi, qword[last_virtual_address]
-        jne memory_access_loop
+        jl memory_access_loop
 
     
     popaq

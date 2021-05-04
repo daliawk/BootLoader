@@ -97,6 +97,8 @@ read_PD_msg db "Read PD", 13, 0
 read_PT_msg db "Read PT", 13, 0
 error_msg db "Everything is not fine", 13, 0
 horray db "HORRRAAAAAAAAY!!!!!", 13, 0
+check_msg db "Check", 13, 0
+
 
 
 ata_channel_var dq 0
