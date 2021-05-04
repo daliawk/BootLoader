@@ -115,14 +115,14 @@ memory_tester:
             cmp r8, qword[last_physical_address]
             jge iterate_test
 
-            push rsi
-            mov rsi, dot
-            call video_print
-            pop rsi
+            ;push rsi
+            ;mov rsi, dot
+            ;call video_print
+            ;pop rsi
 
             mov al, byte[dot]
             mov byte[r8], al
-            cmp byte[r8], al
+            ;cmp byte[r8], al
             ;jne memory_error
 
         iterate_test:

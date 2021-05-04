@@ -16,6 +16,7 @@ debug: action=ignore , cpu1=report #, e1000=report, ioapic=report #memory=report
 boot: floppy
 #boot: disk
 floppya: 1_44="./images/myos.flp", status=inserted
+#ata0-master: type=disk, path="./images/myos.drv"
 #ata0-master: type=disk, path="./images/boot.flp"
 #ata0-slave: type=disk, path="./images/data.raw"
 #ata1-master: type=disk, path="./images/bochs_disk.raw"

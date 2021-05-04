@@ -3,7 +3,6 @@
 %define MEM_PAGE_4K                 0x1000
 %define PAGE_PRESENT_WRITE              0x3 
 %define PAGE_SIZE_BIT               10000000b
-;%define BITMAP_ADDRESS              0x08000
 %define BITMAP_ADDRESS              0x17000
 %define PML4_ADDRESS                0x13000      
 
@@ -15,28 +14,37 @@ last_address dq 0
 last_virtual_address dq 0
 last_physical_address dq 0
 
+region_1 db "region 1", 13, 0
+region_other db "other region", 13, 0
+
 mark_bit:
     ;Parameters:
     ; (index) is passed in register rsi
     ; The value to be put in the bit is passed in register rdi (0/1)
     pushaq
 
+    cmp rsi, 512
+    jge cont
+    
+    mov rdi, 1
+
+    cont:
     mov rax, rsi                ;rax= index
-    and rax, 31                 ;rax= index % 32
+    and rax, 63                 ;rax= index % 64
 
     mov r9, rdi                 ;r9= 0 or 1 depending on the value to be modified
 
-    mov cl,al                   ;cl= index % 32
-    shl r9, cl                  ;r9 = (0/1)<< (index % 32)
+    mov cl,al                   ;cl= index % 64
+    shl r9, cl                  ;r9 = (0/1)<< (index % 64)
 
     mov r10, BITMAP_ADDRESS
 
     mov r8, rsi                 ;r8=index
-    shr r8, 5                   ;r8=index/32
-    shl r8, 2                   ;index offset of the array
+    shr r8, 6                   ;r8=index/64
+    shl r8, 3                   ;index offset of the array
     add r10, r8                 ;Address of word at index
 
-    or DWORD[r10], r9d
+    or QWORD[r10], r9
 
     popaq
     ret
@@ -51,21 +59,21 @@ check_bit:
     push r10
 
     mov rax, rsi                ;rax= index
-    and rax, 31                 ;rax= index % 32
+    and rax, 63                 ;rax= index % 64
 
-    mov r9d, 1                  ;r9d=1
+    mov r9, 1                   ;r9= 0 or 1 depending on the value to be modified
 
-    mov cl,al                   ;cl= index % 32
-    shl r9d, cl                 ;r9d = 1<< (index % 32)
+    mov cl,al                   ;cl= index % 64
+    shl r9, cl                  ;r9 = (0/1)<< (index % 64)
 
     mov r10, BITMAP_ADDRESS
 
     mov r8, rsi                 ;r8=index
-    shr r8, 5                   ;r8=index/32
-    shl r8, 2                   ;index offset of the array
+    shr r8, 6                   ;r8=index/64
+    shl r8, 3                   ;index offset of the array
     add r10, r8                 ;Address of word at index
 
-    and r9d, DWORD[r10]
+    and r9, QWORD[r10]
     mov rsi, r9
 
 
@@ -88,18 +96,30 @@ create_bitmap:
     mov r12, qword[PTR_MEM_REGIONS_COUNT]   ; Count of regions
 
     mem_regions_loop:
+        
         mov ecx, dword[rbx+16]      ; rcx: region type
         mov rax, qword[rbx+8]       ; rax: region length
         xor rdx, rdx
         mov r13, MEM_PAGE_4K
         idiv r13                     ; Divide length by 4K
                                     ; rax has count of 4K in this region
+                            
         mov rdi, 1
+
+        ;mov rsi, check_msg
+        ;call video_print
+
+
+        ;mov rsi, region_other
+
+
         cmp rcx, 1
         jne set_bits_loop      ; If the region type is not 1, set the bits in the bit map
 
         ;mov r13, rax
         mov rdi, 0
+        mov rsi, region_1
+        call video_print
 
         ;make_zero_loop:
         ;    mov rsi, r8
@@ -113,17 +133,33 @@ create_bitmap:
         ;jmp increment
 
         set_bits_loop:
+            ;push rsi
             mov rsi, r8
             call mark_bit
+            ;pop rsi
+
             inc r8
             dec rax
             cmp rax, 0
             jne set_bits_loop
+
+        cmp rdx, 0
+        je increment
+
+        mov rsi, r8
+        mov rdi, 1
+        call mark_bit
+        inc r8
             
-     
+            ;call video_print
         increment:
             dec r12
             add rbx, 0x18
+
+            ;mov rsi, check_msg
+            ;call video_print
+            
+
             cmp r12, 0
             jne mem_regions_loop
 
@@ -215,8 +251,7 @@ ret
 Mapping_Memory:
     pushaq
 
-    call create_bitmap
-
+    
     ;call count_2MB_4K_Pages
 
     ; Calculating first free address
@@ -235,9 +270,6 @@ Mapping_Memory:
     add r12, qword[r11]
     mov qword[last_physical_address], r12
 
-
-    mov rsi, created_bitmap
-    call video_print
 
     ;Create PML4
     ;mov rcx, 4      ; Counter of 4 qwords representing 4 PML4 entries
@@ -291,14 +323,23 @@ Mapping_Memory:
     mov rdi, PML4_ADDRESS
     mov cr3, rdi
 
-    mov rcx, 64
-    mov rax, BITMAP_ADDRESS
-    mov rbx, 0                  ;counter
-    setting_first_2MB:
-        mov byte[rax + rbx], 0xFF
-        inc rbx
-        cmp rbx, rcx
-        jne setting_first_2MB 
+
+    call create_bitmap
+
+
+    mov rsi, created_bitmap
+    call video_print
+
+
+
+    ;mov rcx, 64
+    ;mov rax, BITMAP_ADDRESS
+    ;mov rbx, 0                  ;counter
+    ;setting_first_2MB:
+    ;    mov byte[rax + rbx], 0xFF
+    ;    inc rbx
+    ;    cmp rbx, rcx
+    ;    jne setting_first_2MB 
 
 
 
@@ -446,6 +487,9 @@ Page_Walk:
         mov r8, qword[r9]
         call get_4K_frame_address   ; returns with physical frame address in rsi
 
+        cmp rcx, 1
+        je return
+
         mov qword[r9], rsi
         or qword[r9], PAGE_PRESENT_WRITE
 
@@ -461,6 +505,9 @@ Page_Walk:
         call get_2MB_frame_address   ; returns with physical frame address in rsi
 
         ;shl rsi, 21
+        cmp rcx, 1
+        je return
+
         mov qword[r9], rsi
         or qword[r9], PAGE_PRESENT_WRITE
         or qword[r9], PAGE_SIZE_BIT
@@ -531,7 +578,7 @@ get_4K_frame_address:
     push r9
     push rdi
 
-    mov r8, 0       ;index
+    mov r8, 512       ;index
 
     .bitmap_loop:
         mov rsi, r8
@@ -580,7 +627,7 @@ get_2MB_frame_address:
     push r11
     push rdi
 
-    mov r8, 0       ;index
+    mov r8, 512       ;index
 
     bitmap_loop_2MB:
         mov rsi, r8
