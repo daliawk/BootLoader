@@ -8,6 +8,15 @@ memory_tester:
     mov rdi, 1
     shl rdi, 7
 
+    ;mov r11, qword[Count_of_Frames]
+    ;imul r11, 0x1000
+
+    ;sub r11, 0x200000           ;removing the initial 2MB
+
+    ;mov r12, 0                      ; counter
+
+    mov r11, 0x200000               ; increment value
+
     memory_access_loop:
         mov r8, rsi
 
@@ -60,6 +69,8 @@ memory_tester:
         cmp r10, 0
         jne access_2MB_page
 
+        mov r11, 0x1000
+
         shr r8, 12               
         shl r8, 12              ; r8 is PT base address (After zeroing the last 12 bits)
 
@@ -85,10 +96,7 @@ memory_tester:
 
         or r8, r9               ; r8 has physical address
 
-        push rsi
-        mov rsi, dot
-        call video_print
-        pop rsi
+        
 
         jmp access
 
@@ -103,15 +111,27 @@ memory_tester:
             or r8, r9                       ; r8 has physical address
         
         
-        
         access:
+            cmp r8, qword[last_physical_address]
+            jge iterate_test
+
+            push rsi
+            mov rsi, dot
+            call video_print
+            pop rsi
+
             mov al, byte[dot]
             mov byte[r8], al
             cmp byte[r8], al
-            jne memory_error
+            ;jne memory_error
 
-        inc rsi
+        iterate_test:
+        ;inc rsi
+        add rsi, r11
+        ;inc r12
+
         cmp rsi, qword[last_virtual_address]
+        ;cmp r12, r11
         jl memory_access_loop
 
     
