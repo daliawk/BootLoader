@@ -3,7 +3,7 @@
 %define MEM_PAGE_4K                 0x1000
 %define PAGE_PRESENT_WRITE              0x3 
 %define PAGE_SIZE_BIT               10000000b
-%define BITMAP_ADDRESS              0x17000
+%define BITMAP_ADDRESS              0x40000
 %define PML4_ADDRESS                0x13000      
 
 
@@ -119,7 +119,7 @@ create_bitmap:
             inc r8
             dec rax
             cmp rax, 0
-            jne set_bits_loop
+            jg set_bits_loop
 
         cmp rdx, 0
         je increment
@@ -362,10 +362,10 @@ Page_Walk:
         mov rdi, PML4_ADDRESS
         mov cr3, rdi
 
-        push rsi
-        mov rsi, dot
-        call video_print
-        pop rsi
+        ;push rsi
+        ;mov rsi, dot
+        ;call video_print
+        ;pop rsi
        
     jmp return
 
@@ -386,10 +386,10 @@ Page_Walk:
         mov rdi, PML4_ADDRESS
         mov cr3, rdi
 
-        push rsi
-        mov rsi, dot
-        call video_print
-        pop rsi
+        ;push rsi
+        ;mov rsi, dot
+        ;call video_print
+        ;pop rsi
 
     return:
         pop rsi
@@ -469,7 +469,7 @@ ret
 
 not_found_4K:
     push rsi
-    mov rsi, not_found_2MB
+    mov rsi, not_found_4K_msg
     call video_print
     pop rsi
 
@@ -553,10 +553,10 @@ get_2MB_frame_address:
 
     not_found:
 
-    ;push rsi
-    ;mov rsi, not_found_2MB
-    ;call video_print
-    ;pop rsi
+    push rsi
+    mov rsi, not_found_2MB
+    call video_print
+    pop rsi
 
         mov rcx, 1
         pop rdi
@@ -565,8 +565,3 @@ get_2MB_frame_address:
         pop r9
         pop r8
         ret
-
-
-
-
-

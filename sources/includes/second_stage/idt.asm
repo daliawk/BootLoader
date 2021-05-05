@@ -1,7 +1,8 @@
-ALIGN 4                 ; Make sure that the IDT starts at a 4-byte aligned address    
-IDT_DESCRIPTOR:         ; The label indicating the address of the IDT descriptor to be used with lidt
-      .Size dw    0x0     ; Table size is zero (word, 16-bit)
-      .Base dd    0x0     ; Table base address is NULL (Double word, 32-bit)
+ALIGN 4                 ; Ensuring that the IDT double-word aligned    
+IDT_DESCRIPTOR:        
+      ; We do not need a valid IDT descriptor so we are going to use a null one
+      .Size dw    0x0     ; 16 bits for the size
+      .Base dd    0x0     ; 32 bits for the table base address
 
 load_idt_descriptor:
     pusha

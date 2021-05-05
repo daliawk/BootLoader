@@ -11,10 +11,9 @@ call video_print
 
 call Mapping_Memory
 
-;call memory_tester
-call memory_tester_2
+call memory_tester
 
-mov rsi, horray
+mov rsi, finished_testing
 call video_print
 
 
@@ -90,15 +89,14 @@ start_location   dq  0x0  ; A default start position (Line # 8)
 
 hello_world_str db 'Hello all here',13, 0
 created_bitmap db "Finished bitmap", 13, 0
-not_found_2MB db "Did not find 2MB page", 13, 0
+not_found_2MB db "Finished Mapping 2MB pages", 13, 0
+not_found_4K_msg db "Finished Mapping 4KB pages", 13, 0
 finished_mapping_msg db "Finished Mapping", 13, 0
 created_page_msg db "Created a page", 13, 0
-read_pdp_msg db "Read PDP", 13, 0
-read_PD_msg db "Read PD", 13, 0
-read_PT_msg db "Read PT", 13, 0
-error_msg db "Everything is not fine", 13, 0
-horray db "HORRRAAAAAAAAY!!!!!", 13, 0
+error_msg db "Error reading and writing to memory", 13, 0
+finished_testing db "Finished Mapping and Testing Memory!", 13, 0
 check_msg db "Check", 13, 0
+dot db ".", 0
 
 
 

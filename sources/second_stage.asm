@@ -30,8 +30,7 @@ BITS 16
       
       call get_key_stroke     
       call build_page_table   
-      call disable_pic
-      ;call get_key_stroke  
+      call disable_pic 
       call bios_cls   
 
       
