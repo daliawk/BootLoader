@@ -86,8 +86,16 @@ memory_tester:
         ;call video_print
         ;pop rsi
 
+        
         ; Reading from 4K page
         mov r8, qword[r9]       ; r8 has the value of the PT entry
+
+        mov r9, r8
+        and r9, PAGE_PRESENT_WRITE
+        cmp r9, 0
+        je iterate_test
+
+
         shr r8, 12               
         shl r8, 12              ; r8 is address of physical fram (After zeroing the last 12 bits)
 
@@ -102,6 +110,11 @@ memory_tester:
 
         ; Should address be 2MB aligned?
         access_2MB_page:
+            mov r9, r8
+            and r9, PAGE_PRESENT_WRITE
+            cmp r9, 0
+            je iterate_test
+
             shr r8, 21               
             shl r8, 21                      ; r8 is address of physical frame (After zeroing the last 12 bits)
 
@@ -115,15 +128,15 @@ memory_tester:
             cmp r8, qword[last_physical_address]
             jge iterate_test
 
-            ;push rsi
-            ;mov rsi, dot
-            ;call video_print
-            ;pop rsi
+            push rsi
+            mov rsi, dot
+            call video_print
+            pop rsi
 
             mov al, byte[dot]
             mov byte[r8], al
-            ;cmp byte[r8], al
-            ;jne memory_error
+            cmp byte[r8], al
+            jne memory_error
 
         iterate_test:
         ;inc rsi
@@ -142,3 +155,49 @@ memory_error:
     mov rsi, error_msg
     call video_print
 jmp hang
+
+
+memory_tester_2:
+    pushaq
+
+    mov rcx, qword[PTR_MEM_REGIONS_COUNT]
+    mov rbx, PTR_MEM_REGIONS_TABLE
+    mov rax, 0x1
+    regions_loop:
+        mov r8d, dword[rbx+16]      ; r8: region type
+        cmp r8, 1
+        jne next_region
+
+        mov r9, qword[rbx+8]       ; r9: region length
+        mov r10, qword[rbx]         ; r10: base address of the region
+        access_byte_loop:
+            cmp r10, 0x200000
+            jl next_byte
+
+            xor rdx, rdx
+            mov qword[r10], rax
+            ;cmp byte[r10], al
+            ;mov dl, byte[r10]
+            ;cmp al, dl
+            ;cmp qword[r10], rax
+            ;jne memory_error
+
+            next_byte:
+            inc r10
+            dec r9
+            cmp r9, 1
+            jne access_byte_loop
+
+        
+        next_region:
+            mov rsi, check_msg
+            call video_print
+
+            add rbx, 0x18
+            dec rcx
+            cmp rcx, 0
+            jne regions_loop
+
+
+    popaq
+ret

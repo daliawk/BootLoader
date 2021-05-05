@@ -11,7 +11,8 @@ call video_print
 
 call Mapping_Memory
 
-call memory_tester
+;call memory_tester
+call memory_tester_2
 
 mov rsi, horray
 call video_print
