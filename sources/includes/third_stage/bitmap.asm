@@ -7,12 +7,8 @@
 %define PML4_ADDRESS                0x13000      
 
 
-Count_of_Frames dq 0
-Count_of_2MB dq 0
-Count_of_4KB dq 0
-last_address dq 0
-last_virtual_address dq 0
-last_physical_address dq 0
+Count_of_Frames dq 0                ; Total number of physical 4K frames
+last_address dq 0                   ; Address of memory that can be used as a page
 
 region_1 db "region 1", 13, 0
 region_other db "other region", 13, 0
@@ -26,6 +22,7 @@ mark_bit:
     cmp rsi, 512
     jge cont
     
+    ; We will set the first 2MB as mapped
     mov rdi, 1
 
     cont:
@@ -88,39 +85,37 @@ check_bit:
 create_bitmap:
     pushaq
     
-    
-    mov r8, 0       ;index
+    mov r8, 0                               ;index
     mov rbx, PTR_MEM_REGIONS_TABLE
     mov r10, 512
     mov r12, qword[PTR_MEM_REGIONS_COUNT]   ; Count of regions
 
     mem_regions_loop:
         
-        mov ecx, dword[rbx+16]      ; rcx: region type
-        mov rax, qword[rbx+8]       ; rax: region length
+        mov ecx, dword[rbx+16]              ; rcx: region type
+        mov rax, qword[rbx+8]               ; rax: region length
         xor rdx, rdx
         mov r13, MEM_PAGE_4K
-        idiv r13                     ; Divide length by 4K
-                                    ; rax has count of 4K in this region
+        idiv r13                            ; Divide length by 4K
+                                            ; rax has count of 4K in this region
                             
         mov rdi, 1
 
         cmp rcx, 1
-        jne set_bits_loop      ; If the region type is not 1, set the bits in the bit map
+        jne set_bits_loop                   ; If the region type is not 1, set the bits in the bit map
 
         mov rdi, 0
 
         set_bits_loop:
-            ;push rsi
             mov rsi, r8
             call mark_bit
-            ;pop rsi
 
             inc r8
             dec rax
             cmp rax, 0
             jg set_bits_loop
 
+        ; In case the region size is not divisable by 4K
         cmp rdx, 0
         je increment
 
@@ -129,14 +124,9 @@ create_bitmap:
         call mark_bit
         inc r8
             
-            ;call video_print
         increment:
             dec r12
             add rbx, 0x18
-
-            ;mov rsi, check_msg
-            ;call video_print
-            
 
             cmp r12, 0
             jne mem_regions_loop
@@ -144,7 +134,7 @@ create_bitmap:
     mov qword[Count_of_Frames], r8
 
     popaq
-    ret
+ret
 
 
 
@@ -161,37 +151,31 @@ Mapping_Memory:
     and r9, 0xFFF000                            ; Making sure that it is 4K aligned                           
     mov qword[last_address], r9                ; address of 1 word after memory regions info
 
-    sub r11, 0x18
-    mov r12, qword[r11]
-    add r11, 8
-    add r12, qword[r11]
-    mov qword[last_physical_address], r12
 
     ; Initializing 4 memory pages
     mov rdi, PML4_ADDRESS
-    mov rcx, 0x800                  ; set rep counter to 2048
-    xor rax, rax                    ; Zero out eax
+    mov rcx, 0x800                  ; Setting rep counter to 2048
+    xor rax, rax                    ; Zeroing rax
     mov es, ax
-    cld                             ; Clear direction flag
-    rep stosq                       ; Store RAX (8 bytes) at address RDI
-    ; rep will repeat for 2048 and advance RDI by 8 each time
-    ; 4 * 4096 = 8 * 2 KB = 16 KB = 4 memory pages
+    cld                             ; Clearing direction flag
+    rep stosq                       ; Storing 2048 of the 8 bytes in rax at address in rdi (8 * 2 KB = 4 memory pages)
 
-    mov rdi,PML4_ADDRESS ; Reset rdi to point to 0x1000
-    ; PML4 is now at [es:di] = [0x0000:0x1000]
-    mov rax, rdi ; Store the address of the next page into eax (PDP Table).
-    add rax, MEM_PAGE_4K
-    or rax, PAGE_PRESENT_WRITE ; Set the Present and the Writable flags: bit 0 and bit 1.
-    mov qword[rdi], rax ; Store eax = 0x2003 into the first entry of the PML4.
-        ; PDP is now at [es:di] = [0x0000:0x2000]
+    mov rdi,PML4_ADDRESS 
+    ; PML4 is now at 0x13000
+    
+    mov rax, rdi 
+    add rax, MEM_PAGE_4K            ; rax: address of the next page (PDP table)
+    or rax, PAGE_PRESENT_WRITE      ; Set the Present and the Writable bits
+    mov qword[rdi], rax 
+    ; PDP is now at 0x14000
 
 
     add rdi, MEM_PAGE_4K
-    mov rax, rdi ; Store the address of the next page into eax (PDP Table).
-    add rax, MEM_PAGE_4K
-    or rax, PAGE_PRESENT_WRITE ; Set the Present and the Writable flags: bit 0 and bit 1.
-    mov qword[rdi], rax ; Store eax = 0x3003 into the first entry of the PML4.
-        ; PD is now at [es:di] = [0x0000:0x3000]
+    mov rax, rdi
+    add rax, MEM_PAGE_4K            ; rax: address of the next page (PD table)
+    or rax, PAGE_PRESENT_WRITE      ; Set the Present and the Writable bits
+    mov qword[rdi], rax 
+    ; PD is now at 0x15000
     
    
     add rdi, MEM_PAGE_4K
@@ -202,11 +186,10 @@ Mapping_Memory:
     mov cr3, rdi
 
 
-    call create_bitmap
+    call create_bitmap                      ; Creating the bitmap and filling it
 
-
-    ;mov rsi, created_bitmap
-    ;call video_print
+    mov rsi, created_bitmap
+    call video_print
 
     ; Mapping all physical memory
     mov rsi, 0x200000       ; Virtual address since the first 2MB have already been mapped
@@ -216,10 +199,10 @@ Mapping_Memory:
     mov rcx, 0
     
     loop_2MB:
-        cmp rcx, 1
+        cmp rcx, 1          
         je check_4k_pages
-        call Page_Walk
-        add rsi, r8      ;Next Virtual Address
+        call Page_Walk      ; Takes address in rsi and size in rdi... returns 1 in rcx if there are no more 2MB pages
+        add rsi, r8         ; Next Virtual Address
 
         jmp loop_2MB
 
@@ -228,19 +211,18 @@ Mapping_Memory:
     check_4k_pages:
 
         mov rcx, 0
-
         mov rdi, 0
         shr r8, 9
+
         loop_4K:
             cmp rcx, 1
             je done_mapping
-            call Page_Walk
-            add rsi, r8      ;Next Virtual Address
+            call Page_Walk  ; Takes address in rsi and size in rdi... returns 1 in rcx if there are no more 2MB pages
+            add rsi, r8     ; Next Virtual Address
 
             jmp loop_4K
 
     done_mapping:
-    mov qword[last_virtual_address], rsi
 
     push rsi
     mov rsi, finished_mapping_msg
@@ -276,6 +258,7 @@ Page_Walk:
     cmp r8, PAGE_PRESENT_WRITE  ; Checking present bit
     je read_pdp
 
+    ; In case the page does not exist
     mov r10, qword[last_address]
     mov qword[r9], r10
     or qword[r9], PAGE_PRESENT_WRITE 
@@ -299,6 +282,7 @@ Page_Walk:
     cmp r8, PAGE_PRESENT_WRITE  ; Checking present bit
     je read_PD
 
+    ; In case the page does not exist
     mov r10, qword[last_address]
     mov qword[r9], r10
     or qword[r9], PAGE_PRESENT_WRITE
@@ -321,12 +305,12 @@ Page_Walk:
     cmp r8, PAGE_PRESENT_WRITE  ; Checking present bit
     je read_PT
 
+    ; In case the page does not exist
     mov r10, qword[last_address]
     mov qword[r9], r10
     or qword[r9], PAGE_PRESENT_WRITE
-    ;or qword[r9], rdi
     cmp rdi, 0
-    jne map_2MB
+    jne map_2MB                 ; Checking the size bit to map 2MB
     call create_table
 
     read_PT:
@@ -353,19 +337,17 @@ Page_Walk:
         cmp rcx, 1
         je return
 
+        ; Refreshing CR3
         mov rdi, PML4_ADDRESS
         mov cr3, rdi
 
         mov qword[r9], rsi
         or qword[r9], PAGE_PRESENT_WRITE
 
+        ; Refreshing CR3
         mov rdi, PML4_ADDRESS
         mov cr3, rdi
 
-        ;push rsi
-        ;mov rsi, dot
-        ;call video_print
-        ;pop rsi
        
     jmp return
 
@@ -373,6 +355,7 @@ Page_Walk:
         mov r8, qword[r9]
         call get_2MB_frame_address   ; returns with physical frame address in rsi
 
+        ; Refreshing CR3
         mov rdi, PML4_ADDRESS
         mov cr3, rdi
 
@@ -383,13 +366,10 @@ Page_Walk:
         or qword[r9], PAGE_PRESENT_WRITE
         or qword[r9], PAGE_SIZE_BIT
 
+        ; Refreshing CR3
         mov rdi, PML4_ADDRESS
         mov cr3, rdi
 
-        ;push rsi
-        ;mov rsi, dot
-        ;call video_print
-        ;pop rsi
 
     return:
         pop rsi
@@ -441,7 +421,7 @@ get_4K_frame_address:
 
     mov r8, 512       ;index
 
-    .bitmap_loop:
+    .bitmap_loop:                       ; Searches for an empty frame
         mov rsi, r8
         call check_bit
         cmp rsi, 0
@@ -502,7 +482,7 @@ get_2MB_frame_address:
         jmp not_found
 
 
-    check_2MB:
+    check_2MB:                              ; Checks for 512 empty consecutive frames
         mov r9, r8
         mov r10, 0      ;Frames count
         check_2MB_loop:
@@ -525,10 +505,8 @@ get_2MB_frame_address:
             jmp bitmap_loop_2MB
 
     found:
-        ;mov r11, qword[PTR_MEM_REGIONS_TABLE]    ; Address of first physical frame
         mov r8, r9
-        imul r9, 0x1000
-        ;add r11, r9                             ; Address of the 2MB physical frame
+        imul r9, 0x1000         ; Address of the 2MB physical frame
 
         mov r10, 0      ;Frames count
         mov rdi, 1
