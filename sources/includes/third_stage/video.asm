@@ -64,20 +64,22 @@ mov r9, 0x0B8000
     mov r11, 0
     copy_loop:
         mov r12, 0xB8000
-        mov r13, 0xB8A00
+        mov r13, 0xB80A0
         add r12, r10
         add r13, r10
         inc r10
-        inc r10
-        mov r14w, word[r13]
-        mov word[r12], r14w
+        ;sinc r10
+        mov r14b, byte[r13]
+        mov byte[r12], r14b
         cmp r13, 0xB8FA0
         jl  copy_loop
+
+    
     mov r9, 0x0B8F00
-        clear_loop2:
-        mov byte[rbx],0
-        inc rbx
-        cmp rbx, 0x0B8FA0
+    clear_loop2:
+        mov byte[r9],0
+        inc r9
+        cmp r9, 0x0B8FA0
         jl clear_loop2
 popaq
 ret
@@ -87,10 +89,10 @@ ret
 
 out_video_print_loop:
     
-    cmp rbx, 0x0B8F00
+    cmp word[start_location], 0x0F00
     jl no_scroll
     call scroll_down
-    mov rbx, 0x0B8F00
+    ;mov rbx, 0x0B8F00
     mov word[start_location], 0xF00
     jmp finish_video_print_loop
         no_scroll:
