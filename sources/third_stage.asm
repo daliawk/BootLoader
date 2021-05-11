@@ -11,32 +11,15 @@ call video_print
 
 call Mapping_Memory
 
-call memory_tester
+;call memory_tester
 
-mov rsi, finished_testing
+;mov rsi, finished_testing
+;call video_print
+
+call scan_pci_devices               ; Scanning all pci devices
+mov rsi, finished_pci_scan_msg
 call video_print
 
-
-hang:                   ; An infinite loop just in case interrupts are enabled. More on that later.
-    hlt               ; Halt will suspend the execution. This will not return unless the processor got interrupted.
-    jmp hang          ; Jump to hang so we can halt again.
-
-
-bus_loop:
-    device_loop:
-        function_loop:
-            call get_pci_device
-            inc byte [function]
-            cmp byte [function],8
-        jne device_loop
-        inc byte [device]
-        mov byte [function],0x0
-        cmp byte [device],32
-        jne device_loop
-    inc byte [bus]
-    mov byte [device],0x0
-    cmp byte [bus],255
-    jne bus_loop
 
 channel_loop:
     mov qword [ata_master_var],0x0
@@ -52,6 +35,13 @@ channel_loop:
     inc qword [ata_channel_var]
     cmp qword [ata_channel_var],0x4
     jl channel_loop
+
+mov rsi, identified_ata_msg
+call video_print
+
+hang:                 ; An infinite loop just in case interrupts are enabled. More on that later.
+    hlt               ; Halt will suspend the execution. This will not return unless the processor got interrupted.
+    jmp hang          ; Jump to hang so we can halt again.
     
 
 call init_idt
@@ -75,7 +65,7 @@ kernel_halt:
       %include "sources/includes/third_stage/pit.asm"
       %include "sources/includes/third_stage/ata.asm"
       %include "sources/includes/third_stage/bitmap.asm"
-      %include "sources/includes/third_stage/memory_tester.asm"
+      ;%include "sources/includes/third_stage/memory_tester.asm"
 
 ;*******************************************************************************************************************
 
@@ -92,13 +82,15 @@ created_bitmap db "Finished bitmap", 13, 0
 not_found_2MB db "Finished Mapping 2MB pages", 13, 0
 not_found_4K_msg db "Finished Mapping 4KB pages", 13, 0
 finished_mapping_msg db "Finished Mapping", 13, 0
-created_page_msg db "Created a page", 13, 0
 error_msg db "Error reading and writing to memory", 13, 0
 finished_testing db "Finished Mapping and Testing Memory!", 13, 0
 check_msg db "Check", 13, 0
 dot db ".", 0
+finished_pci_scan_msg db "Finished scanning pci devices", 13, 0
+identified_ata_msg db "Identified ATA and loaded its parameters", 13, 0
 
-
+pci_headers_count dq 0
+pci_headers_address dq 0x3000
 
 ata_channel_var dq 0
 ata_master_var dq 0

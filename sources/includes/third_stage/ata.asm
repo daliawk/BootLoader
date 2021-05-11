@@ -44,7 +44,7 @@
 %define ATA_REG_LBA0       0x03     ; LBA0,1,2 are used to store the address of the first sector (24-bits)
 %define ATA_REG_LBA1       0x04     ; Incase of LBA-28 the remaining 4 bits are sent as the higher 4 bits of
 %define ATA_REG_LBA2       0x05     ; ATA_REG_HDDEVSEL when selecting the drive
-%define ATA_REG_SECCOUNT1  0x02     ; Used for LBA-48 which allows 16 bit for the number of sector to be read, max 65536 
+%define ATA_REG_SECCOUNT1  0x02     ; Used for LBA-48 which allows 16 bit for the number of sector to be read, max 65536
 %define ATA_REG_LBA3       0x03     ; The rmaining 20-bit to acheive LBA-48 and nothing is written to  ATA_REG_HDDEVSEL
 %define ATA_REG_LBA4       0x04
 %define ATA_REG_LBA5       0x05
@@ -117,26 +117,128 @@ endstruc
 ata_copy_pci_header:
     pushaq
       ; This function need to be written by you.
+ 
+
+    mov rdi,ata_pci_header
+    mov rsi,pci_header
+    mov rcx, 0x20 ; set rep counter to 0x20 -> 32 * 8 = 256
+    xor rax, rax ; Zero out eax
+    cld ; Clear direction flag; decrement rcx
+    rep stosq ; Store EAX (4 bytes) at address RDI
     popaq
-    ret
+ret
+ 
 
 select_ata_disk:              ; rdi = channel, rsi = master/slave
     pushaq
     ; This function need to be written by you.
+
+    xor rax,rax ; Zero out RAX
+    mov dx,[ata_base_io_ports+rdi] ; Fetch channel corresponding base I/O port
+    add dx,ATA_REG_HDDEVSEL ; Add port offset for selecting the drive
+    mov al,byte [ata_drv_selector+rsi] ; Fetch the corresponding drive value, master/slave
+    out dx,al ; Output to port
+
     popaq
-    ret
+ret
 
 ata_print_size:
     pushaq
         ; This function need to be written by you.
+
+    mov byte [ata_identify_buffer+39],0x0 ; Setting a null character after serial
+    mov rsi, ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.serial ; Printing a null character after serial
+    call video_print
+    mov rsi,comma
+    call video_print
+    mov byte [ata_identify_buffer+50],0x0
+    mov rsi, ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.fw_version ; Printing a null character after serial
+    call video_print
+    mov rsi,comma
+    call video_print
+    xor rdi,rdi
+    mov rdi, qword [ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.lba_48_sectors] ; Printing number of LBA Sectors
+    call bios_print_hexa
+    mov ax, 0000010000000000b
+    and ax,word [ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.command_set5] ; Checking LBA-48 bit
+    cmp ax,0x0
+    je .out
+    mov rsi,comma
+    call video_print
+    mov rsi,lba_48_supported
+    call video_print
+    .out:
+        mov rsi,newline
+        call video_print
+
     popaq
     ret
 
 
 ata_identify_disk:              ; rdi = channel, rsi = master/slave
     pushaq
-        
-        ; This function need to be written by you.
-        .out:
+       
+    ; This function need to be written by you.
+
+    xor rax,00000000b ; refresh channel
+    mov dx,[ata_control_ports+rdi]
+    out dx,al
+    call select_ata_disk ; Select Disk to send the identify packet
+    xor rax,rax ; Zero out RAX
+    mov dx,[ata_base_io_ports+rdi] ; Send out zero to sector count, lba0, lba1, and lba2
+    add dx,ATA_REG_SECCOUNT0
+    out dx,al
+    mov dx,[ata_base_io_ports+rdi]
+    add dx,ATA_REG_LBA0
+    out dx,al
+    mov dx,[ata_base_io_ports+rdi]
+    add dx,ATA_REG_LBA1
+    out dx,al
+    mov dx,[ata_base_io_ports+rdi]
+    add dx,ATA_REG_LBA2
+    out dx,al
+    mov dx,[ata_base_io_ports+rdi] ; Send Identify command
+    add dx,ATA_REG_COMMAND
+    mov al,ATA_CMD_IDENTIFY
+    out dx,al
+    mov dx,[ata_base_io_ports+rdi] ; Read the status for the first time
+    add dx,ATA_REG_STATUS
+    in al, dx
+    cmp al, 0x2
+    jl .error ; Error if status is less than 2
+
+    .check_ready: ; A loop that checks status has an error or PIO Ready
+        mov dx,[ata_base_io_ports+rdi]
+        add dx,ATA_REG_STATUS
+        in al, dx
+        xor rcx,rcx
+        mov cl,ATA_SR_ERR
+        and cl,al
+        cmp cl,ATA_SR_ERR
+        je .error
+        mov cl,ATA_SR_DRQ
+        and cl,al
+        cmp cl,ATA_SR_DRQ
+        jne .check_ready
+        jmp .ready
+
+    .error: ; Print error message and exit
+        mov rsi,ata_error_msg
+        call video_print
+        jmp .out
+    
+    .ready: ; Read from base port 256 words ATA Identify Configuration Data →
+        mov rsi,ata_identify_msg
+        call video_print
+        mov rdx,[ata_base_io_ports+rdi]
+        mov si,word [ata_identify_buffer_index]
+        add rdi,ata_identify_buffer
+        mov rcx, 256
+        xor rbx,rbx
+        rep insw
+        add word [ata_identify_buffer_index],256
+        call ata_print_size
+
+    .out:
     popaq
-    ret
+ret
