@@ -1,5 +1,5 @@
 ;*******************************************************************************************************************
-bios_print_hexa:  ; A routine to print a 16-bit value stored in di in hexa decimal (4 hexa digits)
+video_print_hexa:  ; A routine to print a 16-bit value stored in di in hexa decimal (4 hexa digits)
 pushaq
 mov rbx,0x0B8000          ; set BX to the start of the video RAM
 ;mov es,bx               ; Set ES to the start of teh video RAM
@@ -32,7 +32,7 @@ video_print:
     add bx,[start_location] ; Store the start location for printing in BX
     xor rcx,rcx
 video_print_loop:           ; Loop for a character by charcater processing
-    lodsb                   ; Load character pointer to by SI into al
+    lodsb                   ; Load character pointed to by SI into al
     cmp al,13               ; Check  new line character to stop printing
     je out_video_print_loop ; If so get out
     cmp al,0                ; Check  new line character to stop printing
@@ -49,21 +49,81 @@ video_print_loop:           ; Loop for a character by charcater processing
     inc rcx
     inc rcx
     jmp video_print_loop    ; Loop to print next character
+
+scroll_down:
+pushaq
+mov r9, 0x0B8000
+    clear_loop1:
+        mov byte[r9],0
+        inc r9
+        cmp r9, 0x0B80A0
+        jl clear_loop1
+; up to B8F50
+
+    mov r10, 0
+    mov r11, 0
+    copy_loop:
+        mov r12, 0xB8000
+        mov r13, 0xB80A0
+        add r12, r10
+        add r13, r10
+        inc r10
+        ;sinc r10
+        mov r14b, byte[r13]
+        mov byte[r12], r14b
+        cmp r13, 0xB8FA0
+        jl  copy_loop
+
+    
+    mov r9, 0x0B8F00
+    clear_loop2:
+        mov byte[r9],0
+        inc r9
+        cmp r9, 0x0B8FA0
+        jl clear_loop2
+popaq
+ret
+
+
+
+
 out_video_print_loop:
-    xor rax,rax
-    mov ax,[start_location] ; Store the start location for printing in AX
-    mov r8,160
-    xor rdx,rdx
-    add ax,0xA0             ; Add a line to the value of start location (80 x 2 bytes)
-    div r8
-    xor rdx,rdx
-    mul r8
-    mov [start_location],ax
+    
+    cmp word[start_location], 0x0F00
+    jl no_scroll
+    call scroll_down
+    ;mov rbx, 0x0B8F00
+    mov word[start_location], 0xF00
     jmp finish_video_print_loop
+        no_scroll:
+            xor rax,rax
+            mov ax,[start_location] ; Store the start location for printing in AX
+            mov r8,160
+            xor rdx,rdx
+            add ax,0xA0             ; Add a line to the value of start location (80 x 2 bytes)
+            div r8
+            xor rdx,rdx
+            mul r8
+            mov [start_location],ax
+            jmp finish_video_print_loop
 out_video_print_loop1:
     mov ax,[start_location] ; Store the start location for printing in AX
     add ax,cx             ; Add a line to the value of start location (80 x 2 bytes)
     mov [start_location],ax
 finish_video_print_loop:
     popaq
+ret
+
+cls:
+    pushaq
+    mov rbx, 0x0B8000
+    ;we need to clear 4000 bytes ====> 80x2x25
+    clear_loop:
+        mov byte[rbx],0
+        inc rbx
+        cmp rbx, 0x0B8FA0
+        jl  clear_loop
+
+mov word[start_location], 0
+popaq
 ret
