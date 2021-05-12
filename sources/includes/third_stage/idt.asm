@@ -19,9 +19,11 @@ IDT_DESCRIPTOR:         ; The label indicating the address of the IDT descriptor
 
 load_idt_descriptor:
     pushaq
-    ; This function need to be written by you.
+    
+    lidt [IDT_DESCRIPTOR] ; load the IDT descriptor
+
     popaq
-    ret
+ret
 
 
 init_idt:         ; Intialize the IDT which is 256 entries each entry corresponds to an interrupt number
@@ -38,23 +40,49 @@ register_idt_handler: ; Store a handler into the handler array
                         ; RSI contains the handler address
       pushaq            ; SSave all general purpose registers
      ; This function need to be written by you.
-      popaq             ; Restore general purpose registers
-      ret
+     shl rdi,3 ; Multiply interrupt number by 8 -> the index in handler array
+      mov [rdi+IDT_HANDLERS_BASE_ADDRESS],rsi ; Store handler address in the corresponding array location
+      
+      popaq ; Restore general purpose registers
+ret
 
 setup_idt:
       pushaq
             ; This function need to be written by you.
       popaq
-      ret
+ret
 
 
 setup_idt_entry:  ; Setup and interrupt entry in the IDT
                   ; RDI: Interrupt Number
                   ; RSI: Address of the handler
       pushaq
-            ; This function need to be written by you.
+      
+      shl rdi,4
+      ; multiply interrupt number by 16 (entry location into IDT)
+      add rdi,IDT_BASE_ADDRESS ; Add the IDT base address
+      mov rax,rsi
+      ; Calculate lower 16-bit of base address and store it
+      and ax,0xFFFF
+      mov [rdi+IDT_ENTRY.base_low],ax
+      mov rax,rsi
+      ; Calculate middle 16-bit of base address and store it
+      shr rax, 16
+      and ax,0xFFFF
+      mov [rdi+IDT_ENTRY.base_mid],ax
+      mov rax,rsi
+      ; Calculate high 16-bit of base address and store it
+      shr rax, 32
+      and eax,0xFFFFFFFF
+      mov [rdi+IDT_ENTRY.base_high],eax
+      mov [rdi+IDT_ENTRY.selector], byte 0x8
+      ; The Selector is the GDT code segment index
+      mov [rdi+IDT_ENTRY.reserved_ist], byte 0x0
+      mov [rdi+IDT_ENTRY.reserved], dword 0x0
+      mov [rdi+IDT_ENTRY.flags], byte IDT_P_KERNEL_INTERRUPT_GATE ; 0x8E, 1 00 0 1110 -> P DPL Z Int_Gate
+      
       popaq
-      ret
+ret
 
 idt_default_handler:
       pushaq
@@ -65,6 +93,18 @@ idt_default_handler:
 isr_common_stub:
       pushaq                  ; Save all general purpose registers
        ; This function need to be written by you.
+      cli ; Disable interrupt
+      mov rdi,rsp ; Set RDI to the stack pointer
+      mov rax,[rdi+120] ; Fetch the Interrupt number that was pushed by the macro
+      shl rax,3 ; Multiple interrupt number by 8 -> offset in handlers array
+      mov rax,[IDT_HANDLERS_BASE_ADDRESS+rax] ; Get the address of the registered routine
+      cmp rax,0 ; Compare address with NULL
+      je .call_default ; If yes, the no registered routine for the interrupt and we execute the default
+      call rax ; Else call the registered routine
+      jmp .out ; Skip the default
+      .call_default:
+            call idt_default_handler ; Call the default routine
+
       .out:
       popaq                   ; Restore all the general purpose registers
       add rsp,16              ; Make up for the interruot number and the error code pushed by the macros
@@ -74,6 +114,21 @@ isr_common_stub:
 irq_common_stub:
       pushaq                  ; Save all general purpose registers
       ; This function need to be written by you.
+      cli ; Disable interrupt
+      mov rdi,rsp ; Set RDI to the stack pointer
+      mov rax,[rdi+120] ; Fetch the Interrupt number that was pushed by the macro
+      shl rax,3 ; Multiple interrupt number by 8 -> offset in handlers array
+      mov rax,[IDT_HANDLERS_BASE_ADDRESS+rax] ; Get the address of the registered routine
+      cmp rax,0 ; Compare address with NULL
+      je .call_default ; If yes, the no registered routine for the interrupt and we execute the default
+      call rax ; Else call the registered routine
+      mov al,0x20 ; VERY IMPORTANT: Send EOI to PIC
+      out MASTER_PIC_COMMAND_PORT,al
+      out SLAVE_PIC_COMMAND_PORT,al
+      jmp .out ; Skip the default
+      .call_default:
+            call idt_default_handler ; Call the default routine
+
       .out:
       popaq                   ; Restore all the general purpose registers
       add rsp,16              ; Make up for the interruot number and the error code pushed by the macros
