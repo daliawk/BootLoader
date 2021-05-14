@@ -38,6 +38,7 @@ init_idt:         ; Intialize the IDT which is 256 entries each entry correspond
       cld                             ; Clearing direction flag
       rep stosq                       ; Storing 512 of the 8 bytes in rax at address in rdi (8 * 0.5 KB = 4KB)
 
+      call load_idt_descriptor        ; Loading IDT descriptor
       popaq
 ret
 
@@ -45,22 +46,21 @@ ret
 register_idt_handler: ; Store a handler into the handler array
                         ; RDI contains the interrupt number
                         ; RSI contains the handler address
-      pushaq            ; SSave all general purpose registers
-      ; This function need to be written by you.
+      pushaq
 
-      ; Called by PIT
-      shl rdi,3 ; Multiply interrupt number by 8 -> the index in handler array
-      mov [rdi+IDT_HANDLERS_BASE_ADDRESS],rsi ; Store handler address in the corresponding array location
+      shl rdi,3                                 ; Calculating the interrupt's index in the handler array
+      mov [rdi+IDT_HANDLERS_BASE_ADDRESS],rsi   ; Storing the handler address in the handler array
       
-      popaq ; Restore general purpose registers
+      popaq 
 ret
 
 setup_idt:
       pushaq
-            ; This function need to be written by you.
-      call setup_idt_exceptions
-      call setup_idt_irqs
-      call load_idt_descriptor
+      
+      cli                           ; Disabling interrupts
+      call setup_idt_exceptions     ; Setting ISRs' entries
+      call setup_idt_irqs           ; Setting IRQs' entries
+      call load_idt_descriptor      ; Loading the IDT descriptor
       
       popaq
 ret
@@ -104,8 +104,7 @@ idt_default_handler:
       ret
 
 isr_common_stub:
-      pushaq                  ; Save all general purpose registers
-       ; This function need to be written by you.
+      pushaq                  ; Save all general purpose registers]
       cli ; Disable interrupt
       mov rdi,rsp ; Set RDI to the stack pointer
       mov rax,[rdi+120] ; Fetch the Interrupt number that was pushed by the macro

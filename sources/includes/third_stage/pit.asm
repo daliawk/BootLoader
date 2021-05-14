@@ -35,17 +35,27 @@ ret
 configure_pit:
   pushaq
   
-  mov rdi,32 ; PIT is connected to IRQ0 -> Interrupt 32
+  ; Registering the PIT IDT handler
+  mov rdi,32          ; Interrupt 32 (IRQ0)
   mov rsi, handle_pit ; The handle_pit is the subroutine that will be invoked when PIT fires
   call register_idt_handler ; We register handle_pit to be invoked through IRQ32
-  mov al,00110110b ; Set PIT Command Register 00 -> Channel 0, 11 -> Write lo,hi bytes, 011 -> Mode 3, 0-> Bin
-  out PIT_COMMAND,al ; Write command port
-  xor rdx,rdx ; Zero out RDX for division
+
+  ; Setting the PIT Command Register
+  mov al,00110110b    ; Bit 0: 0      (The value in the counter is binary)
+                      ; Bits 1-3: 011 (Mode 3)
+                      ; Bits 4-5: 11  (Write to lo and hi bytes)
+                      ; Bits 6-7: 00  (Channel 0)
+  out PIT_COMMAND,al 
+
+  ; Obtaining 50 interrupts per second
+  xor rdx,rdx 
   mov rcx,50
-  mov rax,1193180 ; 1.193180 MHz
-  div rcx ; Calculate divider -> 11931280/50 Divide RDX:RAX/RCX, RDX contains the remainder → after the operation
-  out PIT_DATA0,al ; Write low byte to channel 0 data port
-  mov al,ah ; Copy high byte to AL
-  out PIT_DATA0,al ; Write high byte to channel 0 data port
+  mov rax,1193180 ; The frequency
+  div rcx 
+
+  ; Writing ax to the data port
+  out PIT_DATA0,al
+  mov al, ah 
+  out PIT_DATA0,al
   popaq
 ret
