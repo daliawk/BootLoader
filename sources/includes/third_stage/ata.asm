@@ -158,7 +158,7 @@ ata_print_size:
     call video_print
     xor rdi,rdi
     mov rdi, qword [ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.lba_48_sectors] ; Printing number of LBA Sectors
-    call bios_print_hexa
+    call video_print_hexa
     mov ax, 0000010000000000b
     and ax,word [ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.command_set5] ; Checking LBA-48 bit
     cmp ax,0x0

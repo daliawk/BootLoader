@@ -4,7 +4,7 @@
 %define PAGE_PRESENT_WRITE              0x3 
 %define PAGE_SIZE_BIT               10000000b
 %define BITMAP_ADDRESS              0x40000
-%define PML4_ADDRESS                0x13000      
+%define PML4_ADDRESS                0x15000      
 
 
 Count_of_Frames dq 0                ; Total number of physical 4K frames

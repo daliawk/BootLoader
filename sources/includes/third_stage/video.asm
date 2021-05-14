@@ -32,6 +32,15 @@ video_print:
     add bx,[start_location] ; Store the start location for printing in BX
     xor rcx,rcx
 video_print_loop:           ; Loop for a character by charcater processing
+    cmp rbx, 0xB8FA0
+    jl no_scroll
+
+    call scroll_down
+    mov rbx, 0xB8F00
+    mov byte[start_location], 0xB8F00
+    xor rcx, rcx
+
+    no_scroll:
     lodsb                   ; Load character pointed to by SI into al
     cmp al,13               ; Check  new line character to stop printing
     je out_video_print_loop ; If so get out
@@ -51,14 +60,17 @@ video_print_loop:           ; Loop for a character by charcater processing
     jmp video_print_loop    ; Loop to print next character
 
 scroll_down:
-pushaq
-mov r9, 0x0B8000
+    pushaq
+
+    ; Clearing the first line on the screen
+    mov r9, 0x0B8000
     clear_loop1:
         mov byte[r9],0
         inc r9
         cmp r9, 0x0B80A0
         jl clear_loop1
 ; up to B8F50
+
 
     mov r10, 0
     mov r11, 0
@@ -69,8 +81,8 @@ mov r9, 0x0B8000
         add r13, r10
         inc r10
         ;sinc r10
-        mov r14b, byte[r13]
-        mov byte[r12], r14b
+        mov al, byte[r13]
+        mov byte[r12], al
         cmp r13, 0xB8FA0
         jl  copy_loop
 
@@ -82,30 +94,23 @@ mov r9, 0x0B8000
         cmp r9, 0x0B8FA0
         jl clear_loop2
 popaq
+
 ret
 
 
 
 
 out_video_print_loop:
-    
-    cmp word[start_location], 0x0F00
-    jl no_scroll
-    call scroll_down
-    ;mov rbx, 0x0B8F00
-    mov word[start_location], 0xF00
+    xor rax,rax
+    mov ax,[start_location] ; Store the start location for printing in AX
+    mov r8,160
+    xor rdx,rdx
+    add ax,0xA0             ; Add a line to the value of start location (80 x 2 bytes)
+    div r8
+    xor rdx,rdx
+    mul r8
+    mov [start_location],ax
     jmp finish_video_print_loop
-        no_scroll:
-            xor rax,rax
-            mov ax,[start_location] ; Store the start location for printing in AX
-            mov r8,160
-            xor rdx,rdx
-            add ax,0xA0             ; Add a line to the value of start location (80 x 2 bytes)
-            div r8
-            xor rdx,rdx
-            mul r8
-            mov [start_location],ax
-            jmp finish_video_print_loop
 out_video_print_loop1:
     mov ax,[start_location] ; Store the start location for printing in AX
     add ax,cx             ; Add a line to the value of start location (80 x 2 bytes)

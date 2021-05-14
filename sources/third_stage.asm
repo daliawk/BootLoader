@@ -9,6 +9,24 @@ Kernel:
 mov rsi, hello_world_str
 call video_print
 
+;mov r8, 20
+;loop1:
+;    mov rsi, check_msg
+;    call video_print
+
+;    mov rsi, hello_world_str
+;    call video_print
+;    dec r8
+;    cmp r8, 0
+;    jne loop1
+
+;mov r8, 85
+;loop2:
+;    mov rsi, dot
+;    call video_print
+;    dec r8
+;    jne loop2
+
 call Mapping_Memory
 
 ;call memory_tester
@@ -39,14 +57,20 @@ channel_loop:
 mov rsi, identified_ata_msg
 call video_print
 
-hang:                 ; An infinite loop just in case interrupts are enabled. More on that later.
-    hlt               ; Halt will suspend the execution. This will not return unless the processor got interrupted.
-    jmp hang          ; Jump to hang so we can halt again.
+;hang:                 ; An infinite loop just in case interrupts are enabled. More on that later.
+;    hlt               ; Halt will suspend the execution. This will not return unless the processor got interrupted.
+;    jmp hang          ; Jump to hang so we can halt again.
     
 
 call init_idt
 call setup_idt
-mov rsi,hello_world_str
+
+mov rsi, finished_idt_msg
+call video_print
+
+call configure_pic
+call configure_pit
+mov rsi,done
 call video_print
 
 kernel_halt: 
@@ -65,7 +89,7 @@ kernel_halt:
       %include "sources/includes/third_stage/pit.asm"
       %include "sources/includes/third_stage/ata.asm"
       %include "sources/includes/third_stage/bitmap.asm"
-      ;%include "sources/includes/third_stage/memory_tester.asm"
+      %include "sources/includes/third_stage/memory_tester.asm"
 
 ;*******************************************************************************************************************
 
@@ -88,6 +112,8 @@ check_msg db "Check", 13, 0
 dot db ".", 0
 finished_pci_scan_msg db "Finished scanning pci devices", 13, 0
 identified_ata_msg db "Identified ATA and loaded its parameters", 13, 0
+finished_idt_msg db "Initialized and set up IDT", 13, 0
+done db "The Bootloader is done!", 13, 0
 
 pci_headers_count dq 0
 pci_headers_address dq 0x3000
@@ -103,4 +129,4 @@ hexa_digits       db "0123456789ABCDEF"         ; An array for displaying hexa d
 ALIGN 4
 
 
-times 8192-($-$$) db 0                          ; 0x2000 long
+times 16384-($-$$) db 0                          ; 0x2000 long

@@ -47,40 +47,45 @@ ret
 set_irq_mask:
     pushaq                              ;Save general purpose registers on the stack
     ; This function need to be written by you.
-    .out:    
-    popaq
+
+    mov rdx,MASTER_PIC_DATA_PORT ; Use the master data port
+    cmp rdi,15 ; If the IRQ is larger than 15 get out
+    jg .out
+    cmp rdi,8 ; Else if the interrupt number is less than 8 then it is on the master
+    jl .master
+    sub rdi,8 ; Else subtract 8 from the port number to make it relative to the slave
+    mov rdx,SLAVE_PIC_DATA_PORT ; Use the slave data port
+    .master: ; If we are here we know which port we are going to use and the IRQ is set right
+        in eax,dx ; Read the IMR into eax
+        mov rcx,rdi ; Move rdi to rcx
+        mov rdi,0x1 ; Move 0x1 to rdi
+        shl rdi,cl ; Shift left the value in rdi with IRQ value
+        or rax,rdi ; Move back rdi to rax
+        out dx,eax ; Write to the data port to save the IMR with the new mask
+    .out:
+        popaq
 ret
 
 
 clear_irq_mask:
     pushaq
     ; This function need to be written by you.
-    mov rdx,MASTER_PIC_DATA_PORT
-    ; Use the master data port
-    cmp rdi,15
-    ; If the IRQ is larger than 15 get out
+    mov rdx,MASTER_PIC_DATA_PORT ; Use the master data port
+    cmp rdi,15 ; If the IRQ is larger than 15 get out
     jg .out
-    cmp rdi,8
-    ; Else if the interrupt number is less than 8 then it is on the master
+    cmp rdi,8 ; Else if the interrupt number is less than 8 then it is on the master
     jl .master
-    sub rdi,8
-    ; Else subtract 8 from the port number to make it relative to the slave
-    mov rdx,SLAVE_PIC_DATA_PORT
-    ; Use the slave data port
-    .master:
-    ; If we are here we know which port we are going to use and the IRQ is set right
-    in eax,dx
-    ; Read the IMR into eax
-    mov rcx,rdi
-    ; Move rdi to rcx
-    mov rdi,0x1
-    ; Move 0x1 to rdi
-    shl rdi,cl
-    ; Shift left the value in rdi with IRQ value
-    or rax,rdi
-    ; Move back rdi to rax
-    out dx,eax
-    ; Write to the data port to save the IMR with the new mask
+    sub rdi,8 ; Else subtract 8 from the port number to make it relative to the slave
+    mov rdx,SLAVE_PIC_DATA_PORT ; Use the slave data port
+    .master: ; If we are here we know which port we are going to use and the IRQ is set right
+        in eax,dx ; Read the IMR into eax
+        mov rcx,rdi ; Move rdi to rcx
+        mov rdi,0x1 ; Move 0x1 to rdi
+        shl rdi,cl ; Shift left the value in rdi with IRQ value
+        not rdi     ; Making all bits 1 with the exception of the bit we want to clear 
+        and rax,rdi ; Clearing the wanted bit
+        out dx,eax ; Write to the data port to save the IMR with the new mask
+
     .out:  
     popaq
 ret

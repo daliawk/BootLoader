@@ -31,16 +31,25 @@ init_idt:         ; Intialize the IDT which is 256 entries each entry correspond
                   ; Table total size if 4KB = 256 * 16 = 4096 bytes
       pushaq
       ; This function need to be written by you.
+      mov rdi, IDT_BASE_ADDRESS
+      mov rcx, 0x200                  ; Setting rep counter to 512
+      xor rax, rax                    ; Zeroing rax
+      mov es, ax
+      cld                             ; Clearing direction flag
+      rep stosq                       ; Storing 512 of the 8 bytes in rax at address in rdi (8 * 0.5 KB = 4KB)
+
       popaq
-      ret
+ret
 
 
 register_idt_handler: ; Store a handler into the handler array
                         ; RDI contains the interrupt number
                         ; RSI contains the handler address
       pushaq            ; SSave all general purpose registers
-     ; This function need to be written by you.
-     shl rdi,3 ; Multiply interrupt number by 8 -> the index in handler array
+      ; This function need to be written by you.
+
+      ; Called by PIT
+      shl rdi,3 ; Multiply interrupt number by 8 -> the index in handler array
       mov [rdi+IDT_HANDLERS_BASE_ADDRESS],rsi ; Store handler address in the corresponding array location
       
       popaq ; Restore general purpose registers
@@ -49,6 +58,10 @@ ret
 setup_idt:
       pushaq
             ; This function need to be written by you.
+      call setup_idt_exceptions
+      call setup_idt_irqs
+      call load_idt_descriptor
+      
       popaq
 ret
 
@@ -140,15 +153,209 @@ irq_common_stub:
 setup_idt_irqs:
       pushaq
       ; This function need to be written by you.
+
+      mov rsi,irq0
+mov rdi,32
+call setup_idt_entry
+
+mov rsi,irq1
+mov rdi,33
+call setup_idt_entry
+
+mov rsi,irq2
+mov rdi,34
+call setup_idt_entry
+
+mov rsi,irq3
+mov rdi,35
+call setup_idt_entry
+
+mov rsi,irq4
+mov rdi,36
+call setup_idt_entry
+
+mov rsi,irq5
+mov rdi,37
+call setup_idt_entry
+
+mov rsi,irq6
+mov rdi,38
+call setup_idt_entry
+
+mov rsi,irq7
+mov rdi,39
+call setup_idt_entry
+
+mov rsi,irq8
+mov rdi,40
+call setup_idt_entry
+
+mov rsi,irq9
+mov rdi,41
+call setup_idt_entry
+
+mov rsi,irq10
+mov rdi,42
+call setup_idt_entry
+
+mov rsi,irq11
+mov rdi,43
+call setup_idt_entry
+
+mov rsi,irq12
+mov rdi,44
+call setup_idt_entry
+
+mov rsi,irq13
+mov rdi,45
+call setup_idt_entry
+
+mov rsi,irq14
+mov rdi,46
+call setup_idt_entry
+
+mov rsi,irq15
+mov rdi,47
+call setup_idt_entry
+      
       popaq
-      ret
+ret
 
 
 setup_idt_exceptions:
       pushaq
       ; This function need to be written by you.
+
+      mov rsi,isr0
+      mov rdi,0
+      call setup_idt_entry
+
+      mov rsi,isr1
+      mov rdi,1
+      call setup_idt_entry
+
+      mov rsi,isr2
+      mov rdi,2
+      call setup_idt_entry
+
+      mov rsi,isr3
+      mov rdi,3
+      call setup_idt_entry
+
+      mov rsi,isr4
+      mov rdi,4
+      call setup_idt_entry
+
+      mov rsi,isr5
+      mov rdi,5
+      call setup_idt_entry
+
+      mov rsi,isr6
+      mov rdi,6
+      call setup_idt_entry
+
+      mov rsi,isr7
+      mov rdi,7
+      call setup_idt_entry
+
+      mov rsi,isr8
+      mov rdi,8
+      call setup_idt_entry
+
+      mov rsi,isr9
+      mov rdi,9
+      call setup_idt_entry
+
+      mov rsi,isr10
+      mov rdi,10
+      call setup_idt_entry
+
+      mov rsi,isr11
+      mov rdi,11
+      call setup_idt_entry
+
+      mov rsi,isr12
+      mov rdi,12
+      call setup_idt_entry
+
+      mov rsi,isr13
+      mov rdi,13
+      call setup_idt_entry
+
+      mov rsi,isr14
+      mov rdi,14
+      call setup_idt_entry
+
+      mov rsi,isr15
+      mov rdi,15
+      call setup_idt_entry
+
+      mov rsi,isr16
+      mov rdi,16
+      call setup_idt_entry
+
+      mov rsi,isr17
+      mov rdi,17
+      call setup_idt_entry
+
+      mov rsi,isr18
+      mov rdi,18
+      call setup_idt_entry
+
+      mov rsi,isr19
+      mov rdi,19
+      call setup_idt_entry
+
+      mov rsi,isr20
+      mov rdi,20
+      call setup_idt_entry
+
+      mov rsi,isr21
+      mov rdi,21
+      call setup_idt_entry
+
+      mov rsi,isr22
+      mov rdi,22
+      call setup_idt_entry
+
+      mov rsi,isr23
+      mov rdi,23
+      call setup_idt_entry
+
+      mov rsi,isr24
+      mov rdi,24
+      call setup_idt_entry
+
+      mov rsi,isr25
+      mov rdi,25
+      call setup_idt_entry
+
+      mov rsi,isr26
+      mov rdi,26
+      call setup_idt_entry
+
+      mov rsi,isr27
+      mov rdi,27
+      call setup_idt_entry
+
+      mov rsi,isr28
+      mov rdi,28
+      call setup_idt_entry
+
+      mov rsi,isr29
+      mov rdi,29
+      call setup_idt_entry
+
+      mov rsi,isr30
+      mov rdi,30
+      call setup_idt_entry
+
+      mov rsi,isr31
+      mov rdi,31
+      call setup_idt_entry
+
       popaq
-      ret
+ret
 
 ; This macro will be used with exceptions that does not push error codes on the stack
 ; NOtice that we push first a zero on the stack to make it consistent with other excptions
