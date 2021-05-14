@@ -155,68 +155,68 @@ setup_idt_irqs:
       ; This function need to be written by you.
 
       mov rsi,irq0
-mov rdi,32
-call setup_idt_entry
+      mov rdi,32
+      call setup_idt_entry
 
-mov rsi,irq1
-mov rdi,33
-call setup_idt_entry
+      mov rsi,irq1
+      mov rdi,33
+      call setup_idt_entry
 
-mov rsi,irq2
-mov rdi,34
-call setup_idt_entry
+      mov rsi,irq2
+      mov rdi,34
+      call setup_idt_entry
 
-mov rsi,irq3
-mov rdi,35
-call setup_idt_entry
+      mov rsi,irq3
+      mov rdi,35
+      call setup_idt_entry
 
-mov rsi,irq4
-mov rdi,36
-call setup_idt_entry
+      mov rsi,irq4
+      mov rdi,36
+      call setup_idt_entry
 
-mov rsi,irq5
-mov rdi,37
-call setup_idt_entry
+      mov rsi,irq5
+      mov rdi,37
+      call setup_idt_entry
 
-mov rsi,irq6
-mov rdi,38
-call setup_idt_entry
+      mov rsi,irq6
+      mov rdi,38
+      call setup_idt_entry
 
-mov rsi,irq7
-mov rdi,39
-call setup_idt_entry
+      mov rsi,irq7
+      mov rdi,39
+      call setup_idt_entry
 
-mov rsi,irq8
-mov rdi,40
-call setup_idt_entry
+      mov rsi,irq8
+      mov rdi,40
+      call setup_idt_entry
 
-mov rsi,irq9
-mov rdi,41
-call setup_idt_entry
+      mov rsi,irq9
+      mov rdi,41
+      call setup_idt_entry
 
-mov rsi,irq10
-mov rdi,42
-call setup_idt_entry
+      mov rsi,irq10
+      mov rdi,42
+      call setup_idt_entry
 
-mov rsi,irq11
-mov rdi,43
-call setup_idt_entry
+      mov rsi,irq11
+      mov rdi,43
+      call setup_idt_entry
 
-mov rsi,irq12
-mov rdi,44
-call setup_idt_entry
+      mov rsi,irq12
+      mov rdi,44
+      call setup_idt_entry
 
-mov rsi,irq13
-mov rdi,45
-call setup_idt_entry
+      mov rsi,irq13
+      mov rdi,45
+      call setup_idt_entry
 
-mov rsi,irq14
-mov rdi,46
-call setup_idt_entry
+      mov rsi,irq14
+      mov rdi,46
+      call setup_idt_entry
 
-mov rsi,irq15
-mov rdi,47
-call setup_idt_entry
+      mov rsi,irq15
+      mov rdi,47
+      call setup_idt_entry
       
       popaq
 ret
