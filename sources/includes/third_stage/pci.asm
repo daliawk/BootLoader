@@ -152,11 +152,11 @@ get_pci_device:
 
     call scan_bus
 
-    mov [bus], bl                   ; Returning to the previos bus
+    mov [bus], bl               ; Returning to the previos bus
     jmp return_scanning
 
-    check_ata:
-        ; Checking if the device is ata
+    check_ata:                  ; Checking if the device is ata
+        ; Checking class
         cmp byte[pci_header + PCI_CONF_SPACE.class], 1
         jne return_scanning
 
