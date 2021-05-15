@@ -9,36 +9,20 @@ Kernel:
 mov rsi, hello_world_str
 call video_print
 
-;mov r8, 20
-;loop1:
-;    mov rsi, check_msg
-;    call video_print
-
-;    mov rsi, hello_world_str
-;    call video_print
-;    dec r8
-;    cmp r8, 0
-;    jne loop1
-
-;mov r8, 85
-;loop2:
-;    mov rsi, dot
-;    call video_print
-;    dec r8
-;    jne loop2
 
 call Mapping_Memory
 
+; This part has been commented as the memory tester takes alot of time in running
 ;call memory_tester
-
 ;mov rsi, finished_testing
 ;call video_print
 
-call scan_pci_devices               ; Scanning all pci devices
+; Scanning all PCI devices
+call scan_pci_devices               
 mov rsi, finished_pci_scan_msg
 call video_print
 
-
+; Identifying ATA disks
 channel_loop:
     mov qword [ata_master_var],0x0
     master_slave_loop:
@@ -57,14 +41,13 @@ channel_loop:
 mov rsi, identified_ata_msg
 call video_print
 
- 
-
+; Initializing and setting the IDT
 call init_idt
 call setup_idt
-
 mov rsi, finished_idt_msg
 call video_print
 
+; Configuring the PIC and the PIT
 call configure_pic
 call configure_pit
 mov rsi,done
@@ -73,10 +56,6 @@ call video_print
 kernel_halt: 
     hlt
     jmp kernel_halt
-
-hang:                 ; An infinite loop just in case interrupts are enabled. More on that later.
-    hlt               ; Halt will suspend the execution. This will not return unless the processor got interrupted.
-    jmp hang          ; Jump to hang so we can halt again.
    
 
 ;*******************************************************************************************************************
