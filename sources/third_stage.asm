@@ -57,10 +57,7 @@ channel_loop:
 mov rsi, identified_ata_msg
 call video_print
 
-;hang:                 ; An infinite loop just in case interrupts are enabled. More on that later.
-;    hlt               ; Halt will suspend the execution. This will not return unless the processor got interrupted.
-;    jmp hang          ; Jump to hang so we can halt again.
-    
+ 
 
 call init_idt
 call setup_idt
@@ -77,6 +74,10 @@ kernel_halt:
     hlt
     jmp kernel_halt
 
+hang:                 ; An infinite loop just in case interrupts are enabled. More on that later.
+    hlt               ; Halt will suspend the execution. This will not return unless the processor got interrupted.
+    jmp hang          ; Jump to hang so we can halt again.
+   
 
 ;*******************************************************************************************************************
 
