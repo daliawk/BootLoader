@@ -52,4 +52,4 @@ ret
 memory_error:
     mov rsi, error_msg
     call video_print
-jmp hang
+jmp kernel_halt
