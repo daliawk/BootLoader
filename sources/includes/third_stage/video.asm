@@ -18,7 +18,7 @@ video_print_hexa:
             mov al,[hexa_digits+rsi]                ; get the right hexadcimal digit from the array           
             mov byte [rbx],al                       ; Else Store the charcater into current video location
             inc rbx                                 ; Increment current video location
-            mov byte [rbx],1Fh                      ; Store Blue Backgroun, Yellow font color
+            mov byte [rbx],7                        ; Store Blue Backgroun, Yellow font color
             inc rbx                                 ; Increment current video location
             shl rdi,0x4                             ; Shift bx 4 bits left so the next digits is in the right place to be processed
             dec rcx                                 ; decrement loop counter
