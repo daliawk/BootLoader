@@ -55,7 +55,6 @@ scan_bus:
 
         function_loop:              ; Looping over the functions of the device
 
-
             mov byte[function], bl  ; Setting the function's number
             call get_pci_device     ; Loading the header to memory
             
