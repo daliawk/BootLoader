@@ -36,10 +36,13 @@ endstruc
 
 scan_pci_devices:
     pushaq
+    mov r8, [pci_headers_address] ; Saving initial physical address
 
     ; Scanning first bus
     mov byte[bus], 0
     call scan_bus
+
+    mov [pci_headers_address], r8 ; Returning the original physical address
 
     popaq
 ret
