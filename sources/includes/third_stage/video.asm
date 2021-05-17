@@ -153,10 +153,11 @@ update_cursor:
     add ax, dx
     mov bx, ax
 
+    ; Check if we are out of range
     cmp bx, 2000
     jl set_cursor
 
-    mov bx, 1920
+    mov bx, 1920        ; Set the cursor to the last row
 
 
     set_cursor:
