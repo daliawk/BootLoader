@@ -26,6 +26,7 @@ video_print_hexa:
             jg loopie                               ; Loop again we did not yet finish the 4 digits
 
     add [start_location],word 0x20
+    call update_cursor
     popaq
     ret
 ;*******************************************************************************************************************
@@ -117,6 +118,7 @@ out_video_print_loop1:
     mov [start_location],ax                         ; we set the new location of the start location
 finish_video_print_loop:
 ; this label executes at the very end of a printing function
+    call update_cursor
     popaq                                           ; finally we pop back all the general purpose registers
 ret
 
@@ -133,4 +135,50 @@ cls:
 
 mov word[start_location], 0                         ; since we have cleared the screen we move the cursor to the beginning of the screen
 popaq                                               ; finally we push all the general purpose registers to the cursor location
+ret
+
+update_cursor:
+    pushaq
+    mov bx,[start_location]                         ; Store the start location for printing in BX
+    ;inc bx
+    ;shr rbx, 1
+    
+    xor rdx, rdx
+    mov ax, bx
+    mov cx, 160
+    div cx
+   
+    shr dx, 1       ; Divide by 2
+    imul ax, 80
+    add ax, dx
+    mov bx, ax
+
+    cmp bx, 2000
+    jl set_cursor
+
+    mov bx, 1920
+
+
+    set_cursor:
+    ; input bx = cursor offset
+    ; modifies al, dx
+
+ 
+	mov dx, 0x03D4
+	mov al, 0x0F
+	out dx, al
+ 
+	inc dl
+	mov al, bl
+	out dx, al
+ 
+	dec dl
+	mov al, 0x0E
+	out dx, al
+ 
+	inc dl
+	mov al, bh
+	out dx, al
+
+    popaq
 ret
