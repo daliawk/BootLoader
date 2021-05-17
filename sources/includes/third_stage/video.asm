@@ -140,14 +140,14 @@ ret
 update_cursor:
     pushaq
     mov bx,[start_location]                         ; Store the start location for printing in BX
-    ;inc bx
-    ;shr rbx, 1
     
+    ; Calculating the row and column indices
     xor rdx, rdx
     mov ax, bx
     mov cx, 160
     div cx
    
+   ; Calculating the offset
     shr dx, 1       ; Divide by 2
     imul ax, 80
     add ax, dx
@@ -160,10 +160,6 @@ update_cursor:
 
 
     set_cursor:
-    ; input bx = cursor offset
-    ; modifies al, dx
-
- 
 	mov dx, 0x03D4
 	mov al, 0x0F
 	out dx, al
