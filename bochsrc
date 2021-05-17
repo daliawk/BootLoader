@@ -16,20 +16,30 @@ debug: action=ignore , cpu1=report #, e1000=report, ioapic=report #memory=report
 boot: floppy
 #boot: disk
 floppya: 1_44="./images/myos.flp", status=inserted
-#ata0-master: type=disk, path="./images/myos.drv"
-#ata0-master: type=disk, path="./images/boot.flp"
-#ata0-slave: type=disk, path="./images/data.raw"
-#ata1-master: type=disk, path="./images/bochs_disk.raw"
-#ata0-slave: type=disk, path="./images/bochs_hdd1.img"
+ata0-master: type=disk, path="./images/disk3.qcow2"
+#ata0-master: type=disk, path="./images/boot_hello.flp"
+ata0-slave: type=disk, path="./images/disk0.qcow2"
+#ata1-master: type=disk, path="./images/disk2.qcow2"
+#ata0-slave: type=disk, path="./images/disk3.qcow2"
 #ata0-slave: type=disk, path="./images/text.img"
-#ata1-master: type=disk, path="./images/data.raw"
-#ata1-slave: type=disk, path="./images/bochs_hdd3.img"
+ata1-master: type=disk, path="./images/disk2.qcow2"
+ata1-slave: type=disk, path="./images/disk9.qcow2"
 cpu: count=2, ips=10000000
 cpuid: x86_64=1,apic=x2apic
 #plugin_ctrl: unmapped=0, e1000=3
 #e1000: enabled=1, mac=52:54:00:91:46:f1, ethmod=linux, ethdev=wlp3s0
 #e1000: enabled=1, mac=08:00:27:40:f1:1e, ethmod=linux, ethdev=enp0s25
 #e1000: enabled=1, mac=08:00:27:41:22:75, ethmod=linux, ethdev=enp0s25
+
+
+
+
+
+
+
+
+
+
 
 
 #error: action=report

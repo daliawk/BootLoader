@@ -56,10 +56,35 @@ ret
 setup_idt:
       pushaq
 
+      cli
+      call configure_pic
+
+      ; Masking IRQs
+      mov rdi, 0
+      mask_loop:
+            call set_irq_mask
+            inc rdi
+            cmp rdi, 15
+            jle mask_loop
+
       call setup_idt_exceptions     ; Setting the ISRs
+      call load_idt_descriptor      ; Loading the IDT descriptor
+
       call setup_idt_irqs           ; Setting the IRQs
       call load_idt_descriptor      ; Loading the IDT descriptor
       
+      call configure_pit
+
+      ; Clearing IRQ Masks
+      mov rdi, 0
+      unmask_loop:
+            call clear_irq_mask
+            inc rdi
+            cmp rdi, 15
+            jle unmask_loop
+
+
+      sti
       popaq
 ret
 

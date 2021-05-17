@@ -144,28 +144,30 @@ ata_print_size:                         ; Function that prints all attributes of
                                         ; we commented out below the printing of the attributes and only print the number of LBA sectors
                                         ; to print full list of attributes, uncomment the video_print calls within the function 
     pushaq                              ; Save general purpose registers
-    mov byte [ata_identify_buffer+39],0x0 ; putting one null character 
-    mov rsi, ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.serial ; now printing this null character by the following call
-    ;call video_print
-    mov rsi,comma ; print a comma by the next call
-    ;call video_print
-    mov byte [ata_identify_buffer+50],0x0 ; another null character added
-    mov rsi, ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.fw_version ; Printing this null character
-    ;call video_print
-    mov rsi,comma ; printing another comma
-    ;call video_print
-    xor rdi,rdi ; clearing out rdi before printing the number of LBA sectors
-    mov rdi, qword [ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.lba_48_sectors] ; Printing number of LBA Sectors
-    call video_print_hexa ; calling the video printing function modified in phase 3 of the project
-    mov ax, 0000010000000000b ; move the binary value to ax as per the documentation 
-    and ax,word [ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.command_set5] ; Checking LBA-48 bit
-    cmp ax,0x0 ; comparing the value of ax to 0x0
+    mov byte [ata_identify_buffer+39],0x0                                       ; putting one null character 
+    mov rsi, ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.serial                   ; now printing this null character by the following call
+    call video_print
+    mov rsi,comma 
+    call video_print
+    mov byte [ata_identify_buffer+50],0x0                                       ; another null character added
+    mov rsi, ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.fw_version               ; Printing this null character
+    call video_print
+    mov rsi,newline
+    call video_print
+    xor rdi,rdi                                                                 ; clearing out rdi before printing the number of LBA sectors
+    mov rdi, qword [ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.lba_48_sectors]   ; Printing number of LBA Sectors
+    call video_print_hexa                                                       ; calling the video printing function modified in phase 3 of the project
+    mov ax, 0000010000000000b                                                   ; move the binary value to ax as per the documentation 
+    and ax,word [ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.command_set5]        ; Checking LBA-48 bit
+    cmp ax,0x0                                                                  ; comparing the value of ax to 0x0
     je .out
-    mov rsi,comma ; print a comma
-    ;call video_print
-    mov rsi,lba_48_supported ; print the message that lba_48 is supported if ax was not 0x0
-    ;call video_print
+    mov rsi,newline
+    call video_print
+    mov rsi,lba_48_supported                                                    ; print the message that lba_48 is supported if ax was not 0x0
+    call video_print
     .out:
+        mov rsi,newline
+        call video_print
         mov rsi,newline
         call video_print
 
@@ -177,14 +179,12 @@ ata_identify_disk:
 ; function used to issue the identifying command
 ; rdi = channel, rsi = master/slave
     pushaq
-       
-    ; This function need to be written by you.
 
-    xor rax,00000000b ; refresh channel we want to read from the disk as x xor 0 = x as per the manual
-    mov dx,[ata_control_ports+rdi] ; write zero to the control port of the corresponding ata channel 
+    xor rax,00000000b               ; refresh channel we want to read from the disk as x xor 0 = x as per the manual
+    mov dx,[ata_control_ports+rdi]  ; write zero to the control port of the corresponding ata channel 
     out dx,al
-    call select_ata_disk ; Select Disk to send the identify packet in order to identify it 
-    xor rax,rax ; Zero out RAX
+    call select_ata_disk            ; Select Disk to send the identify packet in order to identify it 
+    xor rax,rax                     ; Zero out RAX
    
    
    ; zero out sector count, lba0, lba1, and lba2 as per the documentation
@@ -201,15 +201,15 @@ ata_identify_disk:
     add dx,ATA_REG_LBA2
     out dx,al
     
-    mov dx,[ata_base_io_ports+rdi] ; Send Identify command
-    add dx,ATA_REG_COMMAND ; send to the ata_reg_command the ata identify command
+    mov dx,[ata_base_io_ports+rdi]  ; Send Identify command
+    add dx,ATA_REG_COMMAND          ; send to the ata_reg_command the ata identify command
     mov al,ATA_CMD_IDENTIFY
     out dx,al
-    mov dx,[ata_base_io_ports+rdi] ; getting the value of the status of the device 
+    mov dx,[ata_base_io_ports+rdi]  ; getting the value of the status of the device 
     add dx,ATA_REG_STATUS
     in al, dx
-    cmp al, 0x2 ; if our status is 0 or 1 then we have an error 
-    jl .error ; Error printing in case of status less than 2
+    cmp al, 0x2                     ; if our status is 0 or 1 then we have an error 
+    jl .error                       ; Error printing in case of status less than 2
 
 
 

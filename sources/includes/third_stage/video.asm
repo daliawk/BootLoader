@@ -10,7 +10,7 @@ video_print_hexa:
     jl no_scrolling                                 ; if not then we jump to no scrolling to print normally
     call scroll_down                                ; if so, then we call the scrolling function
     mov rbx, 0xB8F00                                ; after scrolling we then movethe cursor to the line before the last
-    mov byte[start_location], 0xF00                 ; after that we move the starting location to 3840 which is the beginning of the line second to last
+    mov qword[start_location], 0xF00                 ; after that we move the starting location to 3840 which is the beginning of the line second to last
     
     no_scrolling:
             mov rsi,rdi                             ; Move current bx into si
@@ -43,7 +43,7 @@ video_print_loop:
     jl no_scroll                                    ; if not in the last line print normally
     call scroll_down                                ; else if in the last one then we scroll down
     mov rbx, 0xB8F00                                ; after scrolling we set the cursor to the line before the last
-    mov byte[start_location], 0xF00                 ; moving the index of the start location to 3840 which is the index the beginning of the line before the last
+    mov qword[start_location], 0xF00                 ; moving the index of the start location to 3840 which is the index the beginning of the line before the last
     xor rcx, rcx                                    ; resetting the character counter
 
     no_scroll:

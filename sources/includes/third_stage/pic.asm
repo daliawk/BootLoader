@@ -61,7 +61,7 @@ set_irq_mask:
     cmp rdi,15                                      ; If the IRQ is larger than 15 get out
     jg .out                                         ; else continue executing the function
     cmp rdi,8                                       ; if the interrupt number is less than 8 then it is on the master
-    jl .master                                      ; esle continue executing
+    jl .master                                      ; else continue executing
     sub rdi,8                                       ; subtract 8 from the port number to make it relative to the slave
     mov rdx,SLAVE_PIC_DATA_PORT                     ; Use the slave data port
     .master: 
@@ -85,7 +85,7 @@ clear_irq_mask:
     cmp rdi,15                                      ; If the IRQ is larger than 15 get out
     jg .out                                         ; else continue executing the function
     cmp rdi,8                                       ; if the interrupt number is less than 8 then it is on the master
-    jl .master                                      ; esle continue executing
+    jl .master                                      ; else continue executing
     sub rdi,8                                       ; subtract 8 from the port number to make it relative to the slave
     mov rdx,SLAVE_PIC_DATA_PORT                     ; Use the slave data port
     .master: 
