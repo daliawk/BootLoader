@@ -156,13 +156,13 @@ ata_print_size: ; function that prints all attributes of the ata_drive when foun
     xor rdi,rdi ; clearing out rdi before printing the number of LBA sectors
     mov rdi, qword [ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.lba_48_sectors] ; Printing number of LBA Sectors
     call video_print_hexa ; calling the video printing function modified in phase 3 of the project
-    mov ax, 0000010000000000b
+    mov ax, 0000010000000000b ; move the binary value to ax as per the documentation 
     and ax,word [ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.command_set5] ; Checking LBA-48 bit
-    cmp ax,0x0
+    cmp ax,0x0 ; comparing the value of ax to 0x0
     je .out
-    mov rsi,comma
+    mov rsi,comma ; print a comma
     ;call video_print
-    mov rsi,lba_48_supported
+    mov rsi,lba_48_supported ; print the message that lba_48 is supported if ax was not 0x0
     ;call video_print
     .out:
         mov rsi,newline
@@ -172,17 +172,22 @@ ata_print_size: ; function that prints all attributes of the ata_drive when foun
     ret
 
 
-ata_identify_disk:              ; rdi = channel, rsi = master/slave
+ata_identify_disk:         
+; function used to issue the identifying command
+; rdi = channel, rsi = master/slave
     pushaq
        
     ; This function need to be written by you.
 
-    xor rax,00000000b ; refresh channel
-    mov dx,[ata_control_ports+rdi]
+    xor rax,00000000b ; refresh channel we want to read from the disk as x xor 0 = x as per the manual
+    mov dx,[ata_control_ports+rdi] ; write zero to the control port of the corresponding ata channel 
     out dx,al
-    call select_ata_disk ; Select Disk to send the identify packet
+    call select_ata_disk ; Select Disk to send the identify packet in order to identify it 
     xor rax,rax ; Zero out RAX
-    mov dx,[ata_base_io_ports+rdi] ; Send out zero to sector count, lba0, lba1, and lba2
+   
+   
+   ; zero out sector count, lba0, lba1, and lba2 as per the documentation
+    mov dx,[ata_base_io_ports+rdi] 
     add dx,ATA_REG_SECCOUNT0
     out dx,al
     mov dx,[ata_base_io_ports+rdi]
@@ -194,17 +199,24 @@ ata_identify_disk:              ; rdi = channel, rsi = master/slave
     mov dx,[ata_base_io_ports+rdi]
     add dx,ATA_REG_LBA2
     out dx,al
+    
     mov dx,[ata_base_io_ports+rdi] ; Send Identify command
-    add dx,ATA_REG_COMMAND
+    add dx,ATA_REG_COMMAND ; send to the ata_reg_command the ata identify command
     mov al,ATA_CMD_IDENTIFY
     out dx,al
-    mov dx,[ata_base_io_ports+rdi] ; Read the status for the first time
+    mov dx,[ata_base_io_ports+rdi] ; getting the value of the status of the device 
     add dx,ATA_REG_STATUS
     in al, dx
-    cmp al, 0x2
-    jl .error ; Error if status is less than 2
+    cmp al, 0x2 ; if our status is 0 or 1 then we have an error 
+    jl .error ; Error printing in case of status less than 2
 
-    .check_ready: ; A loop that checks status has an error or PIO Ready
+
+
+
+    .check_ready: 
+    ; A loop that checks status has an error or PIO Ready
+    ; we keep on reading the status and check for all possible error that indicate that our device is not ready yet
+    ; will remain trapped within the loop until the device is ready
         mov dx,[ata_base_io_ports+rdi]
         add dx,ATA_REG_STATUS
         in al, dx
@@ -219,23 +231,27 @@ ata_identify_disk:              ; rdi = channel, rsi = master/slave
         jne .check_ready
         jmp .ready
 
-    .error: ; Print error message and exit
+
+
+
+
+    .error: ; Print msg that an error has occured if the device status is 0 or 1
         mov rsi,ata_error_msg
         call video_print
         jmp .out
     
-    .ready: ; Read from base port 256 words ATA Identify Configuration Data →
-        mov rsi,ata_identify_msg
+    .ready: ; the configuration data that we just identified are read from base port
+        mov rsi,ata_identify_msg ; print that we identified a device
         call video_print
         mov rdx,[ata_base_io_ports+rdi]
         mov si,word [ata_identify_buffer_index]
         add rdi,ata_identify_buffer
         mov rcx, 256
         xor rbx,rbx
-        rep insw
+        rep insw ; eads a 16-bit value from IO port space to the specified memory address
         add word [ata_identify_buffer_index],256
         call ata_print_size
 
-    .out:
+    .out: ; label we reach end
     popaq
 ret
