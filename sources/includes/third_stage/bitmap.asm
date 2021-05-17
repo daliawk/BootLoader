@@ -223,11 +223,6 @@ Mapping_Memory:
             jmp loop_4K
 
     done_mapping:
-
-    push rsi
-    mov rsi, finished_mapping_msg
-    call video_print
-    pop rsi
     popaq
 ret
 

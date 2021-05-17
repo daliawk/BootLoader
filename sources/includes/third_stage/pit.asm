@@ -39,7 +39,7 @@ configure_pit:
   mov rsi, handle_pit         ; The address of the subroutine to be invoked when the PIT produces an interrupt
   call register_idt_handler 
 
-  ; Setting the PIT Comman Register
+  ; Setting the PIT Command Register
   mov al,00110110b            ; Bits 6-7 = 00  (Channel 0)
                               ; Bits 4-5 = 11  (Writing to both lo and hi bytes)
                               ; Bits 1-3 = 011 (Mode 3)
@@ -49,7 +49,7 @@ configure_pit:
   ; Setting the the PIT to produce 50 interrupts per second
   xor rdx,rdx 
   mov rcx,50
-  mov rax,1193180             ; The frequencye
+  mov rax,1193180             ; The frequency
   div rcx                     ; Dividing the frequency
 
   ; Writing the quotient to Channel 0 data port

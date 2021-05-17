@@ -115,34 +115,35 @@ struc ATA_IDENTIFY_DEV_DUMP                     ; Starts at
 endstruc
 
 
-ata_copy_pci_header: ; function to copy PCI header to ata_pci_header memory buffer upon finding a device with class code 0x01 and subclass 0x01
-; called with every iterationof the scan of the PCI
-    pushaq ; save all general purpose registers
-    mov rdi,ata_pci_header ; rdi points to the ata_pci_header buffer
-    mov rsi,pci_header ; rsi points to the pci_header buffer
-    mov rcx, 0x20 ; initialize the counter with hexa 20 which is the equivalent of 256, 32*8 is 256
-    xor rax, rax ; clear the contents of rax reg
-    cld ; Clearing the direction flag
-    rep stosq ; store the value of eax at effective address of RDI
-    popaq ; restore all general purpose registers
+ata_copy_pci_header:        ; Function to copy PCI header to ata_pci_header memory buffer upon finding a device with class code 0x01 and subclass 0x01
+                            ; called with every iterationof the scan of the PCI
+    pushaq                  ; Save all general purpose registers
+
+    mov rdi,ata_pci_header  ; rdi points to the ata_pci_header buffer
+    mov rsi,pci_header      ; rsi points to the pci_header buffer
+    mov rcx, 0x20           ; Initialize the counter with hexa 20 which is the equivalent of 256, 32*8 is 256
+    xor rax, rax            ; clear the contents of rax reg
+    cld                     ; Clearing the direction flag
+    rep stosq               ; Store the value of eax at effective address of RDI
+
+    popaq                   ; Restore all general purpose registers
 ret
  
 
-select_ata_disk:             
-;function takes the channel value on rdi and master/slave indicator at rsi 
-    pushaq ; save all general purpose registers
-    xor rax,rax ; clear rax
-    mov dx,[ata_base_io_ports+rdi] ; determining which channel will be used according to the base I/O port 
-    add dx,ATA_REG_HDDEVSEL ;select the drive by dding the port offset
-    mov al,byte [ata_drv_selector+rsi] ; get drive value, i.e.: master or slave
-    out dx,al ; Output to port
-    popaq ; restore all general purpose registers
+select_ata_disk:                        ; Function takes the channel value on rdi and master/slave indicator at rsi 
+    pushaq                              ; Save all general purpose registers
+    xor rax,rax                         ; Clear rax
+    mov dx,[ata_base_io_ports+rdi]      ; Determining which channel will be used according to the base I/O port 
+    add dx,ATA_REG_HDDEVSEL             ; Select the drive by dding the port offset
+    mov al,byte [ata_drv_selector+rsi]  ; Get drive value, i.e.: master or slave
+    out dx,al                           ; Output to port
+    popaq                               ; Restore all general purpose registers
 ret
 
-ata_print_size: ; function that prints all attributes of the ata_drive when found
-; we commented out below the printing of the attributes and only print the number of LBA sectors
-; to print full list of attributes, uncomment the video_print calls within the function 
-    pushaq ; save general purpose registers
+ata_print_size:                         ; Function that prints all attributes of the ata_drive when found
+                                        ; we commented out below the printing of the attributes and only print the number of LBA sectors
+                                        ; to print full list of attributes, uncomment the video_print calls within the function 
+    pushaq                              ; Save general purpose registers
     mov byte [ata_identify_buffer+39],0x0 ; putting one null character 
     mov rsi, ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.serial ; now printing this null character by the following call
     ;call video_print

@@ -12,6 +12,14 @@ call video_print
 
 call Mapping_Memory
 
+call cls            ; Clearing the screen
+mov rsi, cls_msg
+call video_print
+
+
+mov rsi, finished_mapping_msg
+call video_print
+
 ; This part has been commented as the memory tester takes alot of time in running
 ;call memory_tester
 ;mov rsi, finished_testing
@@ -90,6 +98,7 @@ error_msg db "Error reading and writing to memory", 13, 0
 finished_testing db "Finished Mapping and Testing Memory!", 13, 0
 check_msg db "Check", 13, 0
 dot db ".", 0
+cls_msg db "Screen has been cleared", 13, 0
 finished_pci_scan_msg db "Finished scanning pci devices", 13, 0
 identified_ata_msg db "Identified ATA and loaded its parameters", 13, 0
 finished_idt_msg db "Initialized and set up IDT", 13, 0
