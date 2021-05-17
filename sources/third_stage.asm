@@ -20,9 +20,9 @@ call video_print
 mov rsi, finished_mapping_msg
 call video_print
 
-;call memory_tester
-;mov rsi, finished_testing
-;call video_print
+call memory_tester
+mov rsi, finished_testing
+call video_print
 
 ; Scanning all PCI devices
 call scan_pci_devices               
