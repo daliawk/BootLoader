@@ -1,30 +1,31 @@
-; The Command Register and trhe BASE I/O ports can be retrieved from the PCI BARs, but they are kind of standard and we will define them here for better code presentability
-; When we write it is considered CR, and when we read what is returned is the AS Register
-%define ATA_PRIMARY_CR_AS        0x3F6 ; ATA Primary Control Register/Alternate Status Port
-%define ATA_SECONDARY_CR_AS      0x376 ; ATA Secondary Control Register/Alternate Status Port
+;definitions for comman register and ports to be used in ata.asm
+;in the definitions, CR will be used for writing and AS will be used for reading
 
-%define ATA_PRIMARY_BASE_IO          0x1F0 ; ATA Primary Base I/O Port, up to 8 ports available to 0x1F7
-%define ATA_SECONDARY_BASE_IO          0x170 ; ATA Primary Base I/O Port, up to 8 ports available to 0x177
+%define ATA_PRIMARY_CR_AS        0x3F6 ; defining the status port of the primary control reg 
+%define ATA_SECONDARY_CR_AS      0x376 ; defining the status port of the secondary control reg
 
-%define ATA_MASTER              0x0     ; Mastrer Drive Indicator
-%define ATA_SLAVE               0x1     ; SLave Drive Indicator
+%define ATA_PRIMARY_BASE_IO          0x1F0 ; the first I/O port for primary, we have a max of 8 ports so we use up to 0x1F7 
+%define ATA_SECONDARY_BASE_IO          0x170 ; the first I/O port for secondary, we have a max of 8 ports so we use up to 0x177
 
-%define ATA_MASTER_DRV_SELECTOR    0xA0     ; Sent to ATA_REG_HDDEVSEL for master
-%define ATA_SLAVE_DRV_SELECTOR     0xB0     ; sent to ATA_REG_HDDEVSEL for slave
+%define ATA_MASTER              0x0     ; definition used to indicate that we are on the master drive
+%define ATA_SLAVE               0x1     ; definition used to indicate that we are on the slave drive
+
+%define ATA_MASTER_DRV_SELECTOR    0xA0     ; ATA_REG_HDDEVSEL  selector when we use the master drive
+%define ATA_SLAVE_DRV_SELECTOR     0xB0     ; ATA_REG_HDDEVSEL  selector when we use the slave drive
 
 
 ; Commands to issue to the controller channels
-%define ATA_CMD_READ_PIO          0x20      ; PIO LBA-28 Read
-%define ATA_CMD_READ_PIO_EXT      0x24      ; PIO LBA-48 Read
-%define ATA_CMD_READ_DMA          0xC8      ; DMA LBA-28 Read
-%define ATA_CMD_READ_DMA_EXT      0x25      ; DMA LBA-48 Read
-%define ATA_CMD_WRITE_PIO         0x30      ; PIO LBA-28 Write
-%define ATA_CMD_WRITE_PIO_EXT     0x34      ; PIO LBA-48 Write
-%define ATA_CMD_WRITE_DMA         0xCA      ; DMA LBA-28 Write
-%define ATA_CMD_WRITE_DMA_EXT     0x35      ; DMA LBA-48 Write
+%define ATA_CMD_READ_PIO          0x20      ; command for Programmable Input/Output LBA-28 Read
+%define ATA_CMD_READ_PIO_EXT      0x24      ; command for Programmable Input/Output LBA-48 Read
+%define ATA_CMD_READ_DMA          0xC8      ; command for Direct Memory Access LBA-28 Read
+%define ATA_CMD_READ_DMA_EXT      0x25      ; command for Direct Memory Access LBA-48 Read
+%define ATA_CMD_WRITE_PIO         0x30      ; command for Programmable Input/Output LBA-28 Write
+%define ATA_CMD_WRITE_PIO_EXT     0x34      ; command for Programmable Input/Output LBA-48 Write
+%define ATA_CMD_WRITE_DMA         0xCA      ; command for Direct Memory Access LBA-28 Write
+%define ATA_CMD_WRITE_DMA_EXT     0x35      ; command for Direct Memory Access LBA-48 Write
 %define ATA_CMD_IDENTIFY          0xEC      ; Identify Command
 
-; Different Status values where each bit represents a status
+; Different Status values where each bit represents a status --> uses hot key encoding
 %define ATA_SR_BSY 0x80             ; 10000000b     Busy
 %define ATA_SR_DRDY 0x40            ; 01000000b     Drive Ready
 %define ATA_SR_DF 0x20              ; 00100000b     Drive Fault
@@ -52,16 +53,16 @@
 %define ATA_REG_COMMAND    0x07     ; This register for sending the command to be performed after filling up the rest of the registers
 %define ATA_REG_STATUS     0x07     ; This register is used to read the status of the channel
 
-ata_pci_header times 1024 db 0  ; A memroy space to store ATA Controller PCI Header (4*256)
-; Indexed values
+ata_pci_header times 1024 db 0  ; space used to store PCI header within the memory, 4 * 256 = 1024 
+; Indexed values that are used as if an array to switch between value at first index and second index
 ata_control_ports dw ATA_PRIMARY_CR_AS,ATA_SECONDARY_CR_AS,0
 ata_base_io_ports dw ATA_PRIMARY_BASE_IO,ATA_SECONDARY_BASE_IO,0
 ata_slave_identifier db ATA_MASTER,ATA_SLAVE,0
 ata_drv_selector db ATA_MASTER_DRV_SELECTOR,ATA_SLAVE_DRV_SELECTOR,0
 
-ata_error_msg       db "Error Identifying Drive",13,10,0
-ata_identify_msg    db "Found Drive",13,0
-ata_identify_buffer times 2048 db 0  ; A memroy space to store the 4 ATA devices identify details (4*512)
+ata_error_msg       db "Error Identifying Drive",13,10,0 ; error msg for any drive indentification errors
+ata_identify_msg    db "Found Drive",13,0 ; msg to indicate that the drive was identified successfully
+ata_identify_buffer times 2048 db 0  ; buffer to hold the PCI header of the 4 ATA drives with some extra space (4*512)
 ata_identify_buffer_index dw 0x0
 ata_channel db 0
 ata_slave db 0  
@@ -114,51 +115,47 @@ struc ATA_IDENTIFY_DEV_DUMP                     ; Starts at
 endstruc
 
 
-ata_copy_pci_header:
-    pushaq
-      ; This function need to be written by you.
- 
-
-    mov rdi,ata_pci_header
-    mov rsi,pci_header
-    mov rcx, 0x20 ; set rep counter to 0x20 -> 32 * 8 = 256
-    xor rax, rax ; Zero out eax
-    cld ; Clear direction flag; decrement rcx
-    rep stosq ; Store EAX (4 bytes) at address RDI
-    popaq
+ata_copy_pci_header: ; function to copy PCI header to ata_pci_header memory buffer upon finding a device with class code 0x01 and subclass 0x01
+; called with every iterationof the scan of the PCI
+    pushaq ; save all general purpose registers
+    mov rdi,ata_pci_header ; rdi points to the ata_pci_header buffer
+    mov rsi,pci_header ; rsi points to the pci_header buffer
+    mov rcx, 0x20 ; initialize the counter with hexa 20 which is the equivalent of 256, 32*8 is 256
+    xor rax, rax ; clear the contents of rax reg
+    cld ; Clearing the direction flag
+    rep stosq ; store the value of eax at effective address of RDI
+    popaq ; restore all general purpose registers
 ret
  
 
-select_ata_disk:              ; rdi = channel, rsi = master/slave
-    pushaq
-    ; This function need to be written by you.
-
-    xor rax,rax ; Zero out RAX
-    mov dx,[ata_base_io_ports+rdi] ; Fetch channel corresponding base I/O port
-    add dx,ATA_REG_HDDEVSEL ; Add port offset for selecting the drive
-    mov al,byte [ata_drv_selector+rsi] ; Fetch the corresponding drive value, master/slave
+select_ata_disk:             
+;function takes the channel value on rdi and master/slave indicator at rsi 
+    pushaq ; save all general purpose registers
+    xor rax,rax ; clear rax
+    mov dx,[ata_base_io_ports+rdi] ; determining which channel will be used according to the base I/O port 
+    add dx,ATA_REG_HDDEVSEL ;select the drive by dding the port offset
+    mov al,byte [ata_drv_selector+rsi] ; get drive value, i.e.: master or slave
     out dx,al ; Output to port
-
-    popaq
+    popaq ; restore all general purpose registers
 ret
 
-ata_print_size:
-    pushaq
-        ; This function need to be written by you.
-
-    mov byte [ata_identify_buffer+39],0x0 ; Setting a null character after serial
-    mov rsi, ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.serial ; Printing a null character after serial
+ata_print_size: ; function that prints all attributes of the ata_drive when found
+; we commented out below the printing of the attributes and only print the number of LBA sectors
+; to print full list of attributes, uncomment the video_print calls within the function 
+    pushaq ; save general purpose registers
+    mov byte [ata_identify_buffer+39],0x0 ; putting one null character 
+    mov rsi, ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.serial ; now printing this null character by the following call
     ;call video_print
-    mov rsi,comma
+    mov rsi,comma ; print a comma by the next call
     ;call video_print
-    mov byte [ata_identify_buffer+50],0x0
-    mov rsi, ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.fw_version ; Printing a null character after serial
+    mov byte [ata_identify_buffer+50],0x0 ; another null character added
+    mov rsi, ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.fw_version ; Printing this null character
     ;call video_print
-    mov rsi,comma
+    mov rsi,comma ; printing another comma
     ;call video_print
-    xor rdi,rdi
+    xor rdi,rdi ; clearing out rdi before printing the number of LBA sectors
     mov rdi, qword [ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.lba_48_sectors] ; Printing number of LBA Sectors
-    call video_print_hexa
+    call video_print_hexa ; calling the video printing function modified in phase 3 of the project
     mov ax, 0000010000000000b
     and ax,word [ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.command_set5] ; Checking LBA-48 bit
     cmp ax,0x0
