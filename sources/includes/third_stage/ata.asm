@@ -60,7 +60,7 @@ ata_slave_identifier db ATA_MASTER,ATA_SLAVE,0
 ata_drv_selector db ATA_MASTER_DRV_SELECTOR,ATA_SLAVE_DRV_SELECTOR,0
 
 ata_error_msg       db "Error Identifying Drive",13,10,0
-ata_identify_msg    db "Found Drive",0
+ata_identify_msg    db "Found Drive",13,0
 ata_identify_buffer times 2048 db 0  ; A memroy space to store the 4 ATA devices identify details (4*512)
 ata_identify_buffer_index dw 0x0
 ata_channel db 0
@@ -148,14 +148,14 @@ ata_print_size:
 
     mov byte [ata_identify_buffer+39],0x0 ; Setting a null character after serial
     mov rsi, ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.serial ; Printing a null character after serial
-    call video_print
+    ;call video_print
     mov rsi,comma
-    call video_print
+    ;call video_print
     mov byte [ata_identify_buffer+50],0x0
     mov rsi, ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.fw_version ; Printing a null character after serial
-    call video_print
+    ;call video_print
     mov rsi,comma
-    call video_print
+    ;call video_print
     xor rdi,rdi
     mov rdi, qword [ata_identify_buffer+ATA_IDENTIFY_DEV_DUMP.lba_48_sectors] ; Printing number of LBA Sectors
     call video_print_hexa
@@ -164,9 +164,9 @@ ata_print_size:
     cmp ax,0x0
     je .out
     mov rsi,comma
-    call video_print
+    ;call video_print
     mov rsi,lba_48_supported
-    call video_print
+    ;call video_print
     .out:
         mov rsi,newline
         call video_print
